@@ -92,10 +92,10 @@ test('packed artifact contains documentation, public validation export and execu
     assert.match(help.stdout, /lo doctor/);
 
     const consumer = join(dir, 'consumer');
-    const scope = join(consumer, 'node_modules', '@lo');
+    const scope = join(consumer, 'node_modules', '@lo-ink');
     await mkdir(scope, { recursive: true });
     await symlink(join(unpacked, 'package'), join(scope, 'developer-tools'), 'dir');
-    const imported = spawnSync(process.execPath, ['--input-type=module', '--eval', "import { validateManifest } from '@lo/developer-tools'; if (validateManifest({ schemaVersion: 1, name: 'App', entryUrl: 'https://example.com' }).length) process.exit(1);"], { cwd: consumer, encoding: 'utf8' });
+    const imported = spawnSync(process.execPath, ['--input-type=module', '--eval', "import { validateManifest } from '@lo-ink/developer-tools'; if (validateManifest({ schemaVersion: 1, name: 'App', entryUrl: 'https://example.com' }).length) process.exit(1);"], { cwd: consumer, encoding: 'utf8' });
     assert.equal(imported.status, 0, imported.stderr);
   } finally { await rm(dir, { recursive: true, force: true }); }
 });

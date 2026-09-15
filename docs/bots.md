@@ -30,8 +30,8 @@ separately: do not start a second poller against a bot already serving users.
 
 ## Native LO bot client
 
-For new bots, `@lo/bot-sdk` provides a platform-neutral typed API. The separate
-`@lo/bot-http-lo` transport owns credentials, URLs and HTTP serialization.
+For new bots, `@lo-ink/bot-sdk` provides a platform-neutral typed API. The separate
+`@lo-ink/bot-http-lo` transport owns credentials, URLs and HTTP serialization.
 The initial client supports bot identity, plain-text send/edit/delete,
 command management and polling. It does not yet expose every server method.
 
