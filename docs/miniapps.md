@@ -87,7 +87,7 @@ cannot grant platform permissions.
 
 | Integration | Implemented boundary | Acceptance still needed |
 | --- | --- | --- |
-| LO | Explicit capabilities and the legacy object injected by current clients | Native canonical transport rollout and real client acceptance |
+| LO | SDK 0.19 with `@lo/adapter-lo` 0.20: canonical `ready`, `expand`, `setClosingConfirmation`, `openLink`, `sendData`, and `requestWriteAccess`; matching-session legacy fallback | Dynamic appearance remains legacy-backed; released-client acceptance |
 | Telegram | Version-gated operations, normalized callbacks/events, provider extensions | Hosted application acceptance on supported Telegram clients |
 | VK | Official VK Bridge initialization, ready, theme, viewport, safe areas and lifecycle | Hosted authentication and broader operation support |
 
