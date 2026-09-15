@@ -1,0 +1,20 @@
+{
+  "name": "@lo/developer-tools",
+  "version": "0.1.0",
+  "description": "Project validation and development tools for LO applications",
+  "type": "module",
+  "license": "MIT",
+  "exports": {
+    ".": {
+      "types": "./src/manifest.d.mts",
+      "import": "./src/manifest.mjs",
+      "default": "./src/manifest.mjs"
+    }
+  },
+  "bin": { "lo": "bin/lo.mjs" },
+  "files": ["bin", "src", "docs", "README.md", "LICENSE"],
+  "engines": { "node": ">=22" },
+  "scripts": { "test": "node --test test/*.test.mjs", "check": "node --check bin/lo.mjs && node --check src/manifest.mjs" },
+  "publishConfig": { "access": "public" },
+  "repository": { "type": "git", "url": "https://github.com/lo-ink/lo-developer-tools.git" }
+}
