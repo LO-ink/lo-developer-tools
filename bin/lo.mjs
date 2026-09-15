@@ -5,15 +5,21 @@ import { validateManifest } from '../src/manifest.mjs';
 
 const args = process.argv.slice(2);
 if (!args.length || args[0] === '--help' || args[0] === 'help') {
-  console.log('Usage: lo doctor [path/to/lo.app.json] [--json]\n\nValidate local app metadata. Does not register, publish, or contact a server.');
-} else if (args[0] !== 'doctor' || args.filter(x => !x.startsWith('--')).length > 2 || args.some(x => x.startsWith('--') && x !== '--json')) {
+  console.log('Usage: lo doctor [path/to/lo.app.json] [--publish] [--json]\n\nValidate local app metadata. --publish also checks publication profile requirements. Does not register, publish, or contact a server.');
+} else if (
+  args[0] !== 'doctor' ||
+  args.filter(x => !x.startsWith('--')).length > 2 ||
+  args.some(x => x.startsWith('--') && x !== '--json' && x !== '--publish') ||
+  args.filter(x => x === '--json').length > 1 ||
+  args.filter(x => x === '--publish').length > 1
+) {
   console.error('Unknown command or option. Run lo --help.');
   process.exitCode = 2;
 } else {
   const file = resolve(args.slice(1).find(x => !x.startsWith('--')) ?? 'lo.app.json');
   let issues;
   try {
-    issues = validateManifest(JSON.parse(await readFile(file, 'utf8')));
+    issues = validateManifest(JSON.parse(await readFile(file, 'utf8')), { publication: args.includes('--publish') });
   } catch (error) {
     issues = [{ field: '$', message: error instanceof SyntaxError ? 'Manifest is not valid JSON.' : 'Cannot read manifest file.' }];
   }
