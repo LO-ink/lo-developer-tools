@@ -1,5 +1,5 @@
 {
-  "name": "@lo/developer-tools",
+  "name": "@lo-ink/developer-tools",
   "version": "0.1.0",
   "description": "Project validation and development tools for LO applications",
   "type": "module",

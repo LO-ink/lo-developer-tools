@@ -3,11 +3,13 @@
 The 0.19 SDK separates the application API from host discovery. It is a breaking
 change from 0.18 and earlier: adding the new dependency alone is insufficient.
 
-The packages are being prepared for registry publication. The `@lo` names below
-are the current source package names; they are not a promise that those names
-can already be installed from npm. Until publication, use reviewed package
-archives with recorded source revisions, SHA-256 checksums and a committed
-package-manager lockfile.
+Install SDK 0.19 with the current LO and Telegram adapters:
+
+```sh
+npm install @lo-ink/miniapp-sdk@0.19 @lo-ink/adapter-lo@0.20 @lo-ink/adapter-telegram@0.19
+```
+
+Commit the package-manager lockfile so builds keep the reviewed package versions.
 
 ## Choose a host at the application boundary
 
@@ -15,9 +17,9 @@ Keep the host selection in one integration module. Pass the resulting client
 to application features; UI components do not select platforms.
 
 ```ts
-import { createMiniAppClient } from '@lo/miniapp-sdk';
-import { createAdapter as createLoAdapter } from '@lo/adapter-lo';
-import { createAdapter as createTelegramAdapter } from '@lo/adapter-telegram';
+import { createMiniAppClient } from '@lo-ink/miniapp-sdk';
+import { createAdapter as createLoAdapter } from '@lo-ink/adapter-lo';
+import { createAdapter as createTelegramAdapter } from '@lo-ink/adapter-telegram';
 
 const adapter = createLoAdapter() ?? createTelegramAdapter();
 const client = adapter ? createMiniAppClient(adapter) : null;
@@ -72,7 +74,7 @@ Its cache is only a hint. Existing backends may retain their current
 
 ## Adopt UI independently
 
-`@lo/ui` has no SDK or adapter dependency. Import its stylesheet explicitly and
+`@lo-ink/ui` has no SDK or adapter dependency. Import its stylesheet explicitly and
 apply `lo-ui-root` to the component subtree. Pass `data-lo-theme="light"` or
 `"dark"` when the host should control the theme, and map the host palette to UI
 tokens in the application's integration layer. Without an explicit theme, the
@@ -87,7 +89,7 @@ cannot grant platform permissions.
 
 | Integration | Implemented boundary | Acceptance still needed |
 | --- | --- | --- |
-| LO | SDK 0.19 with `@lo/adapter-lo` 0.20: canonical `ready`, `expand`, `setClosingConfirmation`, `openLink`, `sendData`, and `requestWriteAccess`; matching-session legacy fallback | Dynamic appearance remains legacy-backed; released-client acceptance |
+| LO | SDK 0.19 with `@lo-ink/adapter-lo` 0.20: canonical `ready`, `expand`, `setClosingConfirmation`, `openLink`, `sendData`, and `requestWriteAccess`; matching-session legacy fallback | Dynamic appearance remains legacy-backed; released-client acceptance |
 | Telegram | Version-gated operations, normalized callbacks/events, provider extensions | Hosted application acceptance on supported Telegram clients |
 | VK | Official VK Bridge initialization, ready, theme, viewport, safe areas and lifecycle | Hosted authentication and broader operation support |
 

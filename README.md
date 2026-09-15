@@ -32,7 +32,7 @@ The deployment mapping is direct: `entryUrl` becomes `MiniAppSettings.url`, whil
 Optional `capabilities` declares distinct names; runtime availability is still negotiated with the host. Applications can reuse the validator without invoking the CLI:
 
 ```ts
-import { validateManifest } from '@lo/developer-tools';
+import { validateManifest } from '@lo-ink/developer-tools';
 
 const issues = validateManifest(value, { publication: true });
 ```
