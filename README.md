@@ -59,3 +59,6 @@ npm pack --dry-run
 ```
 
 See [architecture](docs/architecture.md) for package boundaries and [migration](docs/migration.md) for the delivery stages.
+
+Application guides: [migrate a Mini App to SDK 0.19](docs/miniapps.md) and
+[bring an existing bot to LO](docs/bots.md).
