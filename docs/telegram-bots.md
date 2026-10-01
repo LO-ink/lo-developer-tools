@@ -24,4 +24,3 @@ records the tested versions and configuration. The [Python suite](https://github
 lives alongside it. These tests use a local HTTP
 recorder, not a production bot. Polling and webhook ownership must be coordinated
 separately: do not start a second poller against a bot already serving users.
-
