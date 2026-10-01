@@ -50,9 +50,10 @@ Cancellation cannot undo an already completed native action. Do not retry writes
 automatically. A disposed client cannot be reused.
 
 The host and device determine actual features. The current native adapter does
-not advertise invoice or story sharing; a contract declaration alone is not
-host support. Record missing features and choose explicit older-host integration
-when required.
+not advertise invoices. Story presentation and vertical dismissal require their
+capabilities in the corresponding LO host release; older ports omit them. A
+contract declaration alone is not host support. Record missing features and
+choose explicit older-host integration when required.
 
 ## Authenticate on your server
 
