@@ -41,7 +41,9 @@ import { createMiniAppClient } from '@lo-ink/miniapp-sdk';
 import { createAdapter as createLoAdapter } from '@lo-ink/adapter-lo';
 import { createAdapter as createTelegramAdapter } from '@lo-ink/adapter-telegram';
 
-const adapter = createLoAdapter() ?? createTelegramAdapter();
+// Configure the entrypoint explicitly; this does not authenticate a provider.
+const host: 'lo' | 'telegram' = configuredHost;
+const adapter = host === 'lo' ? createLoAdapter() : createTelegramAdapter();
 const client = adapter ? createMiniAppClient(adapter) : null;
 ```
 

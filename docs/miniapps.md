@@ -13,7 +13,7 @@ registry availability and pin reviewed versions in your lockfile before rollout.
 ## Connect at the application boundary
 
 ```ts
-import { createMiniAppClient } from '@lo-ink/miniapp-sdk';
+import { createMiniAppClient, MiniAppError } from '@lo-ink/miniapp-sdk';
 import { createAdapter } from '@lo-ink/adapter-lo';
 
 const adapter = createAdapter();
@@ -35,7 +35,14 @@ if (client.supports('requestWriteAccess')) {
   const allowed = await client.call('requestWriteAccess', undefined);
   showMessagePermission(allowed);
 }
-const stopTheme = client.on('themeChanged', ({ theme }) => renderTheme(theme));
+renderTheme(client.adapter.snapshot().theme);
+let stopTheme = () => {};
+try {
+  stopTheme = client.on('themeChanged', ({ theme }) => renderTheme(theme));
+} catch (error) {
+  if (!(error instanceof MiniAppError) || error.code !== 'unsupported') throw error;
+  // Keep snapshot-only rendering when the host has no live theme events.
+}
 
 // At teardown:
 stopTheme();
