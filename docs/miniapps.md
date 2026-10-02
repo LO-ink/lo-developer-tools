@@ -1,104 +1,82 @@
-# Moving a Mini App to the LO SDK
+# Build a native LO Mini App
 
-The 0.19 SDK separates the application API from host discovery. It is a breaking
-change from 0.18 and earlier: adding the new dependency alone is insufficient.
-
-Install SDK 0.19 with the current LO and Telegram adapters:
+Use the LO SDK for application intent and the native LO adapter for transport.
+The SDK does not discover a host, inject globals or require a framework.
 
 ```sh
-npm install @lo-ink/miniapp-sdk@0.19 @lo-ink/adapter-lo@0.20 @lo-ink/adapter-telegram@0.19
+npm install @lo-ink/miniapp-sdk @lo-ink/adapter-lo
 ```
 
-Commit the package-manager lockfile so builds keep the reviewed package versions.
+The prepared native integration uses SDK 0.19.2 and adapter 0.22.0. Verify
+registry availability and pin reviewed versions in your lockfile before rollout.
 
-## Choose a host at the application boundary
-
-Keep the host selection in one integration module. Pass the resulting client
-to application features; UI components do not select platforms.
+## Connect at the application boundary
 
 ```ts
-import { createMiniAppClient } from '@lo-ink/miniapp-sdk';
-import { createAdapter as createLoAdapter } from '@lo-ink/adapter-lo';
-import { createAdapter as createTelegramAdapter } from '@lo-ink/adapter-telegram';
+import { createMiniAppClient, MiniAppError } from '@lo-ink/miniapp-sdk';
+import { createAdapter } from '@lo-ink/adapter-lo';
 
-const adapter = createLoAdapter() ?? createTelegramAdapter();
-const client = adapter ? createMiniAppClient(adapter) : null;
+const adapter = createAdapter();
+if (!adapter) throw new Error('Open this application inside LO');
+const client = createMiniAppClient(adapter);
+if (client.supports('ready')) await client.call('ready', undefined);
 ```
 
-This example detects already-initialized hosts and performs no script loading.
-The Telegram adapter also exports an explicit `loadAdapter` for applications
-that need the official host script. Keep it in the integration module and do
-not invoke it when an LO host has already been injected. A keyboard-launched
-Telegram application may explicitly opt into empty launch data; that mode
-does not establish a signed identity.
+Pass the client to features. UI components receive values and user actions;
+they do not select hosts, load scripts or render authoritative permission prompts.
+Native discovery uses only the LO port. It never silently adds older host APIs.
+For an existing application on older LO clients, explicitly choose the separate
+`@lo-ink/adapter-lo-legacy` integration until all required native features ship.
 
-## Replace the old entrypoints
+## Capabilities and lifecycle
 
-| Earlier application code | 0.19 application code |
-| --- | --- |
-| `detectHost` / `loadHost` from the SDK | Discovery from the chosen adapter package |
-| `host.sdk` | `createMiniAppClient(adapter)` |
-| `supports(host, feature)` | `client.supports(feature)` |
-| `sdk.ready()` / `sdk.expand()` | `client.call('ready', undefined)` / `client.call('expand', undefined)` |
-| `sdk.BackButton.show()` | `client.call('setButton', { button: 'back', params: { visible: true } })` |
-| `sdk.BackButton.onClick(handler)` | `client.on('backButtonClicked', handler)`; retain the returned unsubscribe function |
-| Raw `themeParams` | `adapter.snapshot().theme` with semantic color roles |
-| Browser globals and foreign version checks | Adapter capability checks or provider-specific extensions |
+```ts
+if (client.supports('requestWriteAccess')) {
+  const allowed = await client.call('requestWriteAccess', undefined);
+  showMessagePermission(allowed);
+}
+renderTheme(client.adapter.snapshot().theme);
+let stopTheme = () => {};
+try {
+  stopTheme = client.on('themeChanged', ({ theme }) => renderTheme(theme));
+} catch (error) {
+  if (!(error instanceof MiniAppError) || error.code !== 'unsupported') throw error;
+  // Keep snapshot-only rendering when the host has no live theme events.
+}
 
-An unavailable capability rejects with `MiniAppError` code `unsupported`.
-Render controls according to `client.supports(...)`. A supported operation can
-still fail if the host disconnects or the request times out. Permission denial
-is a successful boolean result of
-`false`; it is distinct from a failed request.
+// At teardown:
+stopTheme();
+client.dispose();
+```
 
-Calls accept an `AbortSignal` and a positive timeout. Cancellation ends the
-application's wait, aborts the adapter request signal and runs any cleanup
-supplied by the adapter; it cannot undo a completed
-payment, sent message, or native action. Do not retry writes automatically.
-Call `client.dispose()` when its owner unmounts, and unsubscribe listeners when
-their controls disappear. The client cannot be reused after disposal.
+Permission denial is a successful `false` result. Unsupported operations reject
+with `MiniAppError` code `unsupported`. Event subscriptions can also be
+unsupported. Requests have deadlines and accept cancellation. Handle timeout,
+abort and transport failure even when a capability is available.
+Cancellation cannot undo an already completed native action. Do not retry writes
+automatically. A disposed client cannot be reused.
 
-## Keep authentication on the server
+The host and device determine actual features. The current native adapter does
+not advertise invoices. Story presentation and vertical dismissal require their
+capabilities in the corresponding LO host release; older ports omit them. A
+contract declaration alone is not host support. Record missing features and
+choose explicit older-host integration when required.
 
-Send the exact launch assertion to the application backend. The backend
-selects the provider's verification algorithm, verifies the signature and age,
-and issues its own session. Adapter detection is not authentication. Keep
-provider-specific IDs namespaced; equal numeric IDs on two platforms do not
-identify the same person.
+## Authenticate on your server
 
-The optional `authenticate` helper accepts an injected storage object and
-application-owned `authenticate`, `validate` and `isUnauthorized` callbacks.
-Its cache is only a hint. Existing backends may retain their current
-`{ provider, initData }` request shape: map the neutral `adapterId` and
-`launchData` at the integration boundary, without changing the signed bytes.
+Send unchanged launch bytes to your backend for signature, age and audience
+verification. Host detection is not authentication. Issue application sessions
+only after verification and keep server credentials out of browser bundles.
 
-## Adopt UI independently
+The optional `authenticate` helper accepts application-owned callbacks and an
+explicit storage object. Cached sessions are only hints and are validated by
+that backend. It reads no global browser storage implicitly.
 
-`@lo-ink/ui` has no SDK or adapter dependency. Import its stylesheet explicitly and
-apply `lo-ui-root` to the component subtree. Pass `data-lo-theme="light"` or
-`"dark"` when the host should control the theme, and map the host palette to UI
-tokens in the application's integration layer. Without an explicit theme, the
-UI follows the operating system.
+## Test the application boundary
 
-Host palette roles and a product's grouped-page layout are different concerns.
-Preserve the existing page/card role choices when migrating a custom design.
-Use the native host for install and permission confirmation; a web component
-cannot grant platform permissions.
+Exercise the public package entrypoints, permission decline, teardown,
+cancellation, late responses, host appearance and required native operations.
+Record the native client build and package versions for live acceptance.
 
-## Current host coverage
-
-| Integration | Implemented boundary | Acceptance still needed |
-| --- | --- | --- |
-| LO | SDK 0.19 with `@lo-ink/adapter-lo` 0.20: canonical `ready`, `expand`, `setClosingConfirmation`, `openLink`, `sendData`, and `requestWriteAccess`; matching-session legacy fallback | Dynamic appearance remains legacy-backed; released-client acceptance |
-| Telegram | Version-gated operations, normalized callbacks/events, provider extensions | Hosted application acceptance on supported Telegram clients |
-| VK | Official VK Bridge initialization, ready, theme, viewport, safe areas and lifecycle | Hosted authentication and broader operation support |
-
-For VK, unsupported operations remain unavailable. Adding a new provider
-requires an adapter and provider-specific authentication; it does not require
-platform conditionals in SDK core or UI. Similar-looking APIs should only be
-unified when their behavior, permission model and failure semantics agree.
-
-See the [compiled integration example](https://github.com/lo-ink/lo-platform-adapters/blob/main/examples/vanilla.ts)
-and [capability inventory](https://github.com/lo-ink/lo-platform-adapters/blob/main/docs/0.18.0-inventory.md).
-Keep the previous deployed bundle available during rollout. Remove old
-entrypoints only after consumer and client acceptance has passed.
+[SDK contract and errors](https://github.com/LO-ink/lo-miniapp-sdk) ·
+[Native integration](https://github.com/LO-ink/lo-platform-adapters/tree/main/packages/lo)

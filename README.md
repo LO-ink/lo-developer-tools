@@ -47,7 +47,7 @@ const issues = validateManifest(value, { publication: true });
 | [lo-bot-sdk](https://github.com/lo-ink/lo-bot-sdk) | Server-side bot clients |
 | [lo-developer-tools](https://github.com/lo-ink/lo-developer-tools) | Tooling, documentation and templates |
 
-The organization migration is in progress. Repository creation does not imply registry publication, consumer migration or native support. Check the release notes for supported package and host versions.
+Package source, registry publication and released-host support are separate states. Check the package release notes and required runtime capabilities before upgrading consumers.
 
 ## Development
 
@@ -60,5 +60,7 @@ npm pack --dry-run
 
 See [architecture](docs/architecture.md) for package boundaries and [migration](docs/migration.md) for the delivery stages.
 
-Application guides: [migrate a Mini App to SDK 0.19](docs/miniapps.md) and
-[bring an existing bot to LO](docs/bots.md).
+Application guides: [build a native LO Mini App](docs/miniapps.md) and
+[build a native LO bot](docs/bots.md).
+
+Compatibility guides: [existing Telegram Mini Apps](docs/telegram-miniapps.md) and [existing Telegram bots](docs/telegram-bots.md).
