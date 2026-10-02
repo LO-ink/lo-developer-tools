@@ -64,3 +64,9 @@ Application guides: [build a native LO Mini App](docs/miniapps.md) and
 [build a native LO bot](docs/bots.md).
 
 Compatibility guides: [existing Telegram Mini Apps](docs/telegram-miniapps.md) and [existing Telegram bots](docs/telegram-bots.md).
+
+## Мини-приложение и бот
+
+- [Пуши из мини-приложения](docs/miniapp-pushes.md): привязка бота, согласие, серверная подпись, медиа и очередь.
+- [LO и Telegram: отличия](docs/lo-vs-telegram.md).
+- [Звук в мини-играх](docs/miniapp-audio.md).
