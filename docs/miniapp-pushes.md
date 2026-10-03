@@ -70,7 +70,7 @@ caption, replyMarkup })`. Сохраните `result.fileId` после успе
 
 Go-верификатор: публичный stdlib-модуль
 `github.com/LO-ink/lo-miniapp-sdk/go/initdata`, функция `Verify`.
-Node и Go используют общие векторы из `lo-miniapp-sdk/test/fixtures/initdata.json`.
+Node и Go используют общие векторы из `lo-miniapp-sdk/go/initdata/testdata/initdata.json`.
 
 Перед рассылкой включите `DRY_RUN`, дневное окно по часовому поясу человека и
 повторную проверку актуального согласия. Референсный сценарий — сервер «Высотки»,
