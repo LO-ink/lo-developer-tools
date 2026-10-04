@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { resolve, dirname } from 'node:path';
 const root = fileURLToPath(new URL('..', import.meta.url));
 test('native documentation keeps foreign integrations in adapter links and local links resolve', () => {
-  for (const path of ['README.md', ...readdirSync(resolve(root, 'docs')).filter(name => name.endsWith('.md')).map(name => 'docs/' + name)]) {
+  for (const path of ['README.md', 'CHANGELOG.md', ...readdirSync(resolve(root, 'docs')).filter(name => name.endsWith('.md')).map(name => 'docs/' + name)]) {
     const body = readFileSync(resolve(root, path), 'utf8');
     assert.doesNotMatch(body, /telegram|t\.me\/|vk\.com|no-AI|inline_keyboard|callback_data|web_app/i, path);
     for (const match of body.matchAll(/\[[^\]]+\]\(([^)]+)\)/g)) {
