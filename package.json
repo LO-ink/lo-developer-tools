@@ -1,6 +1,6 @@
 {
   "name": "@lo-ink/developer-tools",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Project validation and development tools for LO applications",
   "type": "module",
   "license": "MIT",
@@ -20,7 +20,8 @@
     "docs",
     "README.md",
     "LICENSE",
-    "CHANGELOG.md"
+    "CHANGELOG.md",
+    "security"
   ],
   "engines": {
     "node": ">=22"
