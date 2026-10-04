@@ -5,10 +5,9 @@ They have separate credentials and do not share an initialization mechanism.
 
 ## Native LO bot client
 
-For new bots, `@lo-ink/bot-sdk` provides a platform-neutral typed API. The separate
+For new bots, `@lo-ink/bot-sdk` provides a typed LO API. The separate
 `@lo-ink/bot-http-lo` transport owns credentials, URLs and HTTP serialization.
-The initial client supports bot identity, plain-text send/edit/delete,
-command management and polling. It does not yet expose every server method.
+The client supports identity flags, text send/edit/delete, typed keyboards, photo/document/voice/video uploads, audio references, homogeneous albums, file metadata/downloads, commands and polling. See [Bot API](bot-api.md) for limits and error handling.
 
 Use string identifiers without conversion to JavaScript numbers. Store
 processed updates durably before advancing the polling cursor. Unknown
@@ -21,4 +20,4 @@ Foreign request/response shapes stay in HTTP compatibility modules. New native
 domain operations should not be modeled around a foreign library's class
 hierarchy or numeric-ID assumptions.
 
-For an existing bot library, use the separate [migration guide](telegram-bots.md).
+Existing-library integrations and migration guides live in [lo-platform-adapters](https://github.com/LO-ink/lo-platform-adapters).

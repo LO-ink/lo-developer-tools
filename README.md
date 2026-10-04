@@ -63,10 +63,11 @@ See [architecture](docs/architecture.md) for package boundaries and [migration](
 Application guides: [build a native LO Mini App](docs/miniapps.md) and
 [build a native LO bot](docs/bots.md).
 
-Compatibility guides: [existing Telegram Mini Apps](docs/telegram-miniapps.md) and [existing Telegram bots](docs/telegram-bots.md).
+Migration and compatibility guides live in [lo-platform-adapters](https://github.com/LO-ink/lo-platform-adapters).
 
 ## Мини-приложение и бот
 
 - [Пуши из мини-приложения](docs/miniapp-pushes.md): привязка бота, согласие, серверная подпись, медиа и очередь.
-- [LO и Telegram: отличия](docs/lo-vs-telegram.md).
+- [Bot API: методы, файлы и отказы](docs/bot-api.md).
+- [Безопасность токена и доступ к группам](docs/bot-credentials.md).
 - [Звук в мини-играх](docs/miniapp-audio.md).

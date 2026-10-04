@@ -1,24 +1,17 @@
-# Organization migration
+# Upgrading an LO application
 
-## Starting point
+Install the native SDK and LO adapter together. Keep the adapter in the application's composition root; the SDK does not discover platform globals.
 
-The source browser SDK is 0.18.0, revision `15b832edfd03559b12cbb2e843141f10532f5c96`. The inspected native application baseline is `64c63e9e350ba35c6b96f037b6fab0b21f9047b2`. Preserve working capabilities and deployed applications while moving ownership to this organization.
+```sh
+npm install @lo-ink/miniapp-sdk @lo-ink/adapter-lo
+```
 
-## Delivery stages
+Create one client for the application's lifetime and dispose it when its owner unmounts. Use `client.supports(...)` for controls, and still handle failures: a supported method can require consent or a configured bot. Verify signed launch data on the server before using it for identity or authorization.
 
-1. Inventory exported helpers, host APIs, wire events, consumer dependencies and server trust boundaries. Record what has actual runtime coverage.
-2. Introduce the canonical SDK adapter contract and UI tokens. Move foreign host discovery and compatibility to adapters. Test the full existing helper surface and report gaps explicitly.
-3. Integrate a native LO bridge and optional inbound compatibility at the composition root. Preserve server-side consent, scoped credentials, navigation checks and installed-app state.
-4. Migrate the example applications through clean, reviewed branches. Compare actual generated packages, lockfiles and production behavior. Preserve unrelated local work.
-5. Exercise the contract on a third host and publish a capability matrix. Add native extensions only when their semantics are real and tested.
-6. Publish signed-off packages and migration guides. Update application dependencies and record rollout evidence before deprecating old entrypoints.
+For older LO installations, select `@lo-ink/adapter-lo-legacy` explicitly. Migration from other APIs is documented in [LO adapters](https://github.com/lo-ink/lo-platform-adapters/tree/main/docs); compatibility is opt-in.
 
-## Existing applications
+When upgrading from Mini App SDK 0.19 to 0.20, import server verification from `@lo-ink/miniapp-sdk/server`, keep unverified `launchUnsafe` data for display only, and use `bindSafeAreaCss` to combine system and application insets. Version 0.20.1 also fixes cleanup and appearance fallback behavior.
 
-Keep the old published entrypoint available until its consumers have migrated. Avoid a global search-and-replace of host names: authorization, identity, event timing and capabilities may differ. Keep provider-specific user identifiers namespaced and link accounts explicitly.
+Bot SDK 0.4 adds video, cached audio, albums and file downloads. Text is limited to 4096 UTF-16 units, captions to 1024. Media and edit operations accept inline keyboards. Uploaded video metadata cannot accompany cached file IDs. An explicit `retryRejected` can repeat one safe 429 refusal; it must not repeat uncertain sends or consumed streams.
 
-Applications may retain their current UI while adopting the SDK. UI migration is optional and can proceed screen by screen. Native launch, close and permission surfaces remain host-owned.
-
-## Completion
-
-The migration is complete only after package artifacts, native integration, consumer deployments and runtime acceptance are verified. Remaining gaps belong in release notes and work tracking; an empty repository or passing isolated test is not completion evidence.
+Build from the lockfile and test the packaged dependencies as well as source imports. Check the application inside LO before rollout, including denied permissions, cancellation, theme changes and downloads. Record the deployed SDK and LO versions when reporting a failed method.

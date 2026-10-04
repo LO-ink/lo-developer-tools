@@ -1,7 +1,7 @@
 # Пуши из мини-приложения
 
 Рецепт для зарегистрированного мини-приложения LO. Требует `@lo-ink/miniapp-sdk`
-0.20.0, `@lo-ink/bot-sdk` 0.3.0 и `@lo-ink/bot-http-lo` 0.3.0.
+0.20.1, `@lo-ink/bot-sdk` 0.4.0 и `@lo-ink/bot-http-lo` 0.4.0.
 Эти версии нужно выпускать вместе; наличие исходников в main само по себе не означает публикацию в npm.
 
 1. Создайте бота в том же сообществе и привяжите его к мини-приложению в LO Connect.
@@ -33,8 +33,8 @@ try {
   await bot.sendMessage({
     conversationId: launch.user.id,
     text: "Пора сыграть ещё одну партию!",
-    replyMarkup: { inline_keyboard: [[{
-      text: "Открыть", web_app: { url: registeredAppUrl },
+    replyMarkup: { inlineKeyboard: [[{
+      text: "Открыть", miniApp: { url: registeredAppUrl },
     }]] },
   });
 } catch (error) {
@@ -52,7 +52,7 @@ try {
 }
 ```
 
-URL `web_app` должен совпадать с URL приложения в LO Connect **байт в байт**,
+URL `miniApp` должен совпадать с URL приложения в LO Connect **байт в байт**,
 включая путь, завершающий `/` и query. Иначе открытая страница может не получить
 подписанные данные зарегистрированного приложения. Такие кнопки работают только
 в личном чате и используют HTTPS. Кнопку меню задаёт `setChatMenuButton`.
