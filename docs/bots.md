@@ -5,8 +5,9 @@ They have separate credentials and do not share an initialization mechanism.
 
 ## Native LO bot client
 
-For new bots, `@lo-ink/bot-sdk` provides a typed LO API. The separate
-`@lo-ink/bot-http-lo` transport owns credentials, URLs and HTTP serialization.
+For new bots, `@lo-ink/bot-sdk` provides a typed LO API. Its included native
+HTTP transport owns credentials, URLs and serialization. Use `createLoBotClient`
+from `@lo-ink/bot-sdk` 0.5 or later; no separate adapter is required.
 The client supports identity flags, text send/edit/delete, typed keyboards, photo/document/voice/video uploads, audio references, homogeneous albums, file metadata/downloads, commands and polling. See [Bot API](bot-api.md) for limits and error handling.
 
 Use string identifiers without conversion to JavaScript numbers. Store

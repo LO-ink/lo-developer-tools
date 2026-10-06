@@ -5,6 +5,9 @@ import {
   existsSync,
   mkdtempSync,
   mkdirSync,
+  readFileSync,
+  chmodSync,
+  symlinkSync,
   writeFileSync,
   rmSync,
 } from "node:fs";
@@ -64,17 +67,167 @@ test("unexpected registry identity and malformed metadata stop publication", asy
   );
 });
 
-test("already published immutable versions are built without republishing or altering dist-tags", async () => {
+test("already published immutable versions are packed and verified without republishing", async () => {
   const commands = [];
   const result = await publishPackages([identity], {
-    fetcher: async () => response(200, identity),
-    execute: (_command, args) => {
-      commands.push(args);
-    },
+    fetcher: async () => response(200, { ...identity, dist: { integrity } }),
+    execute: executor(commands),
     log: () => {},
   });
-  assert.deepEqual(commands, [["run", "prepack", "--if-present"]]);
+  assert.equal(commands.filter((args) => args[0] === "pack").length, 1);
+  assert.equal(commands.filter((args) => args[0] === "publish").length, 0);
   assert.equal(result[0].status, "already published");
+  assert.equal(result[0].integrity, integrity);
+});
+
+function packageArchive(
+  files = { "index.js": "export const value = 42;" },
+  executable = false,
+  link = false,
+) {
+  const root = mkdtempSync(join(tmpdir(), "lo-release-content-"));
+  try {
+    mkdirSync(join(root, "package"));
+    writeFileSync(join(root, "package/package.json"), JSON.stringify(identity));
+    for (const [name, content] of Object.entries(files))
+      writeFileSync(join(root, "package", name), content);
+    if (executable) chmodSync(join(root, "package/index.js"), 0o755);
+    if (link) symlinkSync("index.js", join(root, "package/link.js"));
+    execFileSync("tar", [
+      "-czf",
+      join(root, "archive.tgz"),
+      "-C",
+      root,
+      "package",
+    ]);
+    return readFileSync(join(root, "archive.tgz"));
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+}
+
+const sha512 = (bytes) =>
+  `sha512-${createHash("sha512").update(bytes).digest("base64")}`;
+function contentExecutor(commands, bytes) {
+  return (command, args, options) => {
+    assert.equal(command, "npm");
+    commands.push(args);
+    if (args[0] === "run") return;
+    assert.equal(args[0], "pack", "verification must finish before any upload");
+    const name = options.cwd === "new" ? "@lo-ink/new" : identity.name;
+    const filename = "fixture.tgz";
+    writeFileSync(join(args.at(-1), filename), bytes);
+    return JSON.stringify([
+      { ...identity, name, filename, integrity: sha512(bytes) },
+    ]);
+  };
+}
+function contentRegistry(bytes) {
+  return async (url) =>
+    url.endsWith(".tgz")
+      ? { status: 200, ok: true, arrayBuffer: async () => bytes }
+      : url.includes("%2Fnew")
+        ? response(404)
+        : response(200, {
+            ...identity,
+            dist: {
+              integrity: sha512(bytes),
+              tarball: `${"https://registry.npmjs.org"}/fixture.tgz`,
+            },
+          });
+}
+
+test("equivalent published files tolerate different gzip headers without republishing", async () => {
+  const local = packageArchive(),
+    published = Buffer.from(local);
+  published[4] ^= 1;
+  assert.notEqual(sha512(local), sha512(published));
+  const commands = [];
+  const result = await publishPackages([identity], {
+    fetcher: contentRegistry(published),
+    execute: contentExecutor(commands, local),
+    log: () => {},
+  });
+  assert.equal(result[0].status, "already published");
+  assert.equal(result[0].integrity, sha512(published));
+  assert.equal(
+    commands.some((args) => args[0] === "publish"),
+    false,
+  );
+});
+
+test("changed, missing, added or executable published files stop the entire release before uploading", async () => {
+  const local = packageArchive();
+  for (const published of [
+    packageArchive({ "index.js": "export const value = 41;" }),
+    packageArchive({}),
+    packageArchive({
+      "index.js": "export const value = 42;",
+      "extra.js": "changed",
+    }),
+    packageArchive(undefined, true),
+  ]) {
+    const commands = [];
+    await assert.rejects(
+      publishPackages(
+        [{ ...identity, name: "@lo-ink/new", cwd: "new" }, identity],
+        {
+          fetcher: contentRegistry(published),
+          execute: contentExecutor(commands, local),
+          log: () => {},
+        },
+      ),
+      /source differs.*bump its version/,
+    );
+    assert.equal(
+      commands.some((args) => args[0] === "publish"),
+      false,
+    );
+  }
+});
+
+test("published archive verification rejects missing integrity, foreign URLs, corrupted bytes and links", async () => {
+  const local = packageArchive(),
+    changed = packageArchive({ "index.js": "changed" });
+  for (const [dist, bytes, pattern] of [
+    [{}, changed, /SHA-512/],
+    [
+      {
+        integrity: sha512(changed),
+        tarball: "https://example.com/fixture.tgz",
+      },
+      changed,
+      /archive URL/,
+    ],
+    [
+      {
+        integrity: sha512(changed),
+        tarball: "https://registry.npmjs.org/fixture.tgz",
+      },
+      local,
+      /integrity mismatch/,
+    ],
+  ]) {
+    await assert.rejects(
+      publishPackages([identity], {
+        fetcher: async (url) =>
+          url.endsWith(".tgz")
+            ? { ok: true, arrayBuffer: async () => bytes }
+            : response(200, { ...identity, dist }),
+        execute: contentExecutor([], local),
+        log: () => {},
+      }),
+      pattern,
+    );
+  }
+  await assert.rejects(
+    publishPackages([identity], {
+      fetcher: contentRegistry(packageArchive(undefined, false, true)),
+      execute: contentExecutor([], local),
+      log: () => {},
+    }),
+    /regular files/,
+  );
 });
 
 test("a fresh linked workspace builds a published dependency before its unpublished dependent", async () => {

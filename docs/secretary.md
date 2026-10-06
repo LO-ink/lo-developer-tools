@@ -5,8 +5,9 @@ an owner. Recipients see the human author; LO separately records the bot actor.
 LO enforces consent and stores messages and drafts. Your bot runtime hosts the
 response logic, storage and any AI provider.
 
-Use `@lo-ink/bot-sdk` 0.4.4 with `@lo-ink/bot-http-lo` 0.5.1, or a later combination
-verified against your deployed LO backend. Start with the
+Use `@lo-ink/bot-sdk` 0.5 or later with its included native HTTP transport,
+verified against your deployed LO backend. `createLoSecretaryClient` creates the
+native client without a separate adapter. Start with the
 [reference bot](https://github.com/LO-ink/lo-platform-adapters/tree/main/examples/secretary)
 and its synthetic tests. The Node example is a single-process template bot without AI.
 Python `lo-aiogram` does not implement this native LO extension; familiar business

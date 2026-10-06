@@ -1,6 +1,6 @@
 # LO Bot API
 
-The HTTP API root is `https://api.lo.ink`. Keep the token on the server. `@lo-ink/bot-sdk` uses string identifiers; `@lo-ink/bot-http-lo` handles HTTP serialization.
+The HTTP API root is `https://api.lo.ink`. Keep the token on the server. `@lo-ink/bot-sdk` uses string identifiers; its native HTTP transport handles serialization.
 
 | SDK operation             | LO support                                                                              |
 | ------------------------- | --------------------------------------------------------------------------------------- |

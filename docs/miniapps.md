@@ -1,24 +1,23 @@
 # Build a native LO Mini App
 
-Use the LO SDK for application intent and the native LO adapter for transport.
-The SDK does not discover a host, inject globals or require a framework.
+Use Mini App SDK 0.22 or later for the native LO client and transport.
+The SDK discovers the host only when createLoClient is called; importing it is inert.
+It does not inject globals or require a framework.
 
 ```sh
-npm install @lo-ink/miniapp-sdk @lo-ink/adapter-lo
+npm install @lo-ink/miniapp-sdk
 ```
 
-Pin reviewed SDK and adapter versions in your lockfile before rollout. Check
-their release notes and test the combination against your supported LO clients.
+Pin the reviewed SDK version in your lockfile before rollout. Check
+its release notes and test it against your supported LO clients.
 
 ## Connect at the application boundary
 
 ```ts
-import { createMiniAppClient, MiniAppError } from "@lo-ink/miniapp-sdk";
-import { createAdapter } from "@lo-ink/adapter-lo";
+import { createLoClient, MiniAppError } from "@lo-ink/miniapp-sdk";
 
-const adapter = createAdapter();
-if (!adapter) throw new Error("Open this application inside LO");
-const client = createMiniAppClient(adapter);
+const client = createLoClient();
+if (!client) throw new Error("Open this application inside LO");
 if (client.supports("ready")) await client.call("ready", undefined);
 ```
 
@@ -57,7 +56,7 @@ abort and transport failure even when a capability is available.
 Cancellation cannot undo an already completed native action. Do not retry writes
 automatically. A disposed client cannot be reused.
 
-The host and device determine actual features. The current native adapter does
+The host and device determine actual features. The current native transport does
 not advertise invoices. Story presentation and vertical dismissal require their
 capabilities in the corresponding LO host release; older ports omit them. A
 contract declaration alone is not host support. Record missing features and

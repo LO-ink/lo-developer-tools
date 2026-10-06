@@ -1,6 +1,6 @@
 # Messages from a mini-app
 
-Use `@lo-ink/miniapp-sdk`, `@lo-ink/bot-sdk` and `@lo-ink/bot-http-lo` for a registered LO mini-app.
+Use `@lo-ink/miniapp-sdk` and `@lo-ink/bot-sdk` for a registered LO mini-app.
 
 1. Create a bot in the same community and associate it with the app in LO Connect. After changing settings, choose **Save and publish**.
 2. Save the one-time app key, appId and bot token on the server. The app key and bot token are separate secrets. Keep both out of bundles, URLs, logs and repositories. Use the appKey string directly; do not base64-decode it.
@@ -12,17 +12,16 @@ Use `@lo-ink/miniapp-sdk`, `@lo-ink/bot-sdk` and `@lo-ink/bot-http-lo` for a reg
 // Server only. Obtain raw from client.adapter.launchData.
 import { verifyInitData } from "@lo-ink/miniapp-sdk/server";
 import {
-  createBotClient,
+  createLoBotClient,
   RateLimited,
   NotAllowed,
   BadRequest,
   Unavailable,
 } from "@lo-ink/bot-sdk";
-import { createLoHttpBotTransport } from "@lo-ink/bot-http-lo";
 
 const launch = verifyInitData(raw, { appKey, appId, maxAgeSec: 3600 });
 if (!launch.user) throw new Error("Missing verified user");
-const bot = createBotClient(createLoHttpBotTransport({ token: botToken }));
+const bot = createLoBotClient({ token: botToken });
 try {
   await bot.sendMessage({
     conversationId: launch.user.id,
