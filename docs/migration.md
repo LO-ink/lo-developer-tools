@@ -1,6 +1,7 @@
 # Upgrading an LO application
 
-Install the native SDK and LO adapter together. Keep the adapter in the application's composition root; the SDK does not discover platform globals.
+Install Mini App SDK 0.22 or later and call `createLoClient` at the application's composition root. Host discovery happens only during that explicit call.
+Generic injected adapters remain available for other and compatibility hosts.
 
 ```sh
 npm install @lo-ink/miniapp-sdk
