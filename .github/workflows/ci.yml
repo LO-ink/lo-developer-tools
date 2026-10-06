@@ -1,5 +1,5 @@
 name: Checks
-on: [push, pull_request]
+on: [push, pull_request, workflow_dispatch]
 permissions:
   contents: read
 jobs:
@@ -14,3 +14,19 @@ jobs:
       - run: npm run check
       - run: npm test
       - run: npm pack --dry-run
+  publish-npm:
+    needs: [test]
+    if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: npm
+    concurrency:
+      group: npm-release
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: ./actions/publish-npm
+        with:
+          package-paths: '["."]'

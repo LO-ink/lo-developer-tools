@@ -1,0 +1,24 @@
+name: Publish LO npm packages
+description: Publish new package versions through npm Trusted Publishing after repository checks.
+inputs:
+  package-paths:
+    description: JSON array of package directories, in dependency order.
+    default: '["."]'
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+      with:
+        node-version: "24"
+    - name: Install npm with OIDC support
+      shell: bash
+      run: npm install --global npm@11.21.0 --registry=https://registry.npmjs.org
+    - name: Install locked dependencies
+      shell: bash
+      run: npm ci
+    - name: Publish new versions
+      shell: bash
+      env:
+        LO_RELEASE_ACTION_PATH: ${{ github.action_path }}
+        LO_RELEASE_PACKAGE_PATHS: ${{ inputs.package-paths }}
+      run: node "$LO_RELEASE_ACTION_PATH/publish.mjs"
