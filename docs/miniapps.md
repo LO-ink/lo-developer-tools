@@ -7,8 +7,8 @@ The SDK does not discover a host, inject globals or require a framework.
 npm install @lo-ink/miniapp-sdk @lo-ink/adapter-lo
 ```
 
-The native integration uses SDK 0.20.1 and adapter 0.23.0. Verify
-registry availability and pin reviewed versions in your lockfile before rollout.
+Pin reviewed SDK and adapter versions in your lockfile before rollout. Check
+their release notes and test the combination against your supported LO clients.
 
 ## Connect at the application boundary
 
