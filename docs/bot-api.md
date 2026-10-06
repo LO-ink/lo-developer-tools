@@ -1,29 +1,29 @@
-# Bot API LO
+# LO Bot API
 
-Корень HTTP API — `https://api.lo.ink`. Токен хранится на сервере. Собственный API `@lo-ink/bot-sdk` использует строковые идентификаторы; `@lo-ink/bot-http-lo` отвечает за HTTP и формат запросов.
+The HTTP API root is `https://api.lo.ink`. Keep the token on the server. `@lo-ink/bot-sdk` uses string identifiers; `@lo-ink/bot-http-lo` handles HTTP serialization.
 
-| Операция SDK | Поддержка LO |
-| --- | --- |
-| sendMessage / editMessage | Текст до 4096 UTF-16 единиц; пробельный текст недопустим |
-| deleteMessage | Удаление собственного сообщения бота; сообщения пользователя в личке не удаляются |
-| sendPhoto | Файл до 10 МиБ или fileId; HTTP-ссылки недопустимы |
-| sendDocument | Файл до 50 МиБ или fileId |
-| sendVoice | AAC в M4A/MP4 или сырой AAC; без подписи |
-| sendVideo | Файл до 50 МиБ при включённой функции установки или fileId |
-| sendAudio | Только fileId; загрузки аудио нет |
-| sendMediaGroup | 2–10 фото либо 2–10 документов; подпись только у первого |
-| getFile / downloadFile | Метаданные и поток байтов; path может отсутствовать для каталожного медиа |
+| SDK operation             | LO support                                                                              |
+| ------------------------- | --------------------------------------------------------------------------------------- |
+| sendMessage / editMessage | Up to 4096 UTF-16 units; whitespace-only text is rejected                               |
+| deleteMessage             | Deletes the bot's own message; cannot delete an incoming user message in a private chat |
+| sendPhoto                 | Upload up to 10 MiB or a fileId; HTTP URLs are rejected                                 |
+| sendDocument              | Upload up to 50 MiB or a fileId                                                         |
+| sendVoice                 | AAC in M4A/MP4 or raw AAC; no caption                                                   |
+| sendVideo                 | Upload up to 50 MiB when enabled by the installation, or a fileId                       |
+| sendAudio                 | fileId only; no audio uploads                                                           |
+| sendMediaGroup            | 2–10 photos or 2–10 documents; caption on the first item only                           |
+| getFile / downloadFile    | Metadata and a byte stream; catalog media may have no path                              |
 
-`deleteMessage` не удаляет входящие сообщения пользователя в личке. На живом LO такой запрос возвращает `400: message to delete not found`; это не подтверждение удаления. Не обещайте автоматическое удаление присланного пользователем файла с секретами. Удаление сообщения само по себе также не подтверждает очистку файла из хранилища.
+Deleting an incoming private-chat message returns `400: message to delete not found`. Do not promise automatic removal of user-uploaded secrets. Deleting a message does not establish that its file was removed from storage.
 
-Подпись медиа — до 1024 UTF-16 единиц. Эмодзи может занимать две единицы. Разметка сообщений задаётся `replyMarkup`; reply-клавиатура доступна для sendMessage, остальные методы принимают inline-клавиатуру. URL кнопки зарегистрированного приложения совпадает с URL из LO Connect байт в байт.
+Captions are limited to 1024 UTF-16 units; an emoji can occupy two units. Use `replyMarkup` for keyboards. Reply keyboards are accepted by sendMessage; other methods accept inline keyboards. A registered app's button URL must match its LO Connect URL byte for byte.
 
-При загрузке видео можно передать duration (0–86400), width/height (0–16384), thumbnail новым файлом и supportsStreaming. Рядом с fileId метаданные загрузки недопустимы. Если серверу нужен транскод, ожидание длится до 45 секунд; SDK по умолчанию даёт видео 90 секунд. В выключенной установке загрузка получает явный отказ, а не успешный результат без видео.
+Uploaded video accepts duration (0–86400), width/height (0–16384), an uploaded thumbnail and supportsStreaming. Upload metadata cannot accompany a fileId. Transcoding can take up to 45 seconds; the SDK allows 90 seconds for video by default. Disabled uploads produce an explicit error.
 
-`BadRequest` требует исправить запрос, `NotAllowed` — прекратить отправки, `RateLimited.retryAfterSeconds` задаёт паузу, `Unavailable` обозначает временную недоступность. HTML вместо JSON при 5xx также считается недоступностью. Сетевой сбой не доказывает, что сообщение не сохранилось: автоматических повторов отправок нет. `retryRejected` явно повторяет один подтверждённый отказ с safeToRetry, в пределах указанной паузы. Для повтора используйте байты/Blob или создавайте новый поток.
+Correct `BadRequest` inputs and stop sending after `NotAllowed`. `RateLimited.retryAfterSeconds` specifies the delay. `Unavailable` denotes temporary failure, including non-JSON HTTP 5xx responses. A network failure does not prove the server rejected a send. Mutations are never retried automatically. `retryRejected` explicitly repeats one confirmed, safeToRetry refusal after its delay. Reuse bytes/Blob or create a fresh stream for each attempt.
 
-Лимиты по умолчанию: 30 сообщений/с на бота, 1/с на чат (всплеск 5), 20/мин на группу. Установка может задавать более строгие значения.
+Default limits are 30 messages per second per bot, 1 per second per chat (burst 5), and 20 per minute per group. Installations may impose stricter limits.
 
-В SDK 0.4 имена полей клавиатуры принадлежат API LO: `inlineKeyboard`, `callbackData`, `miniApp`, `resize`, `oneTime`, `persistent`, `placeholder`. Кнопка меню приложения — `type: "miniApp"`. HTTP-формат собирает адаптер. При переходе с 0.3 обновите объекты клавиатур.
+Native keyboard fields are `inlineKeyboard`, `callbackData`, `miniApp`, `resize`, `oneTime`, `persistent` and `placeholder`. App menu buttons use `type: "miniApp"`; the adapter constructs the HTTP representation.
 
-`await bot.getCapabilities()` читает флаги установки и обновляет кэш по запросу через пять минут. Вызывайте его при запуске и перед заданиями, которые зависят от возможностей установки. `getCapabilities({refresh: true})` сбрасывает ожидание кэша; отсутствие ответа capabilities на старой установке остаётся неизвестным состоянием. Права бота не зависят от этих флагов.
+`await bot.getCapabilities()` reads installation flags and refreshes its cache on demand after five minutes. Call it at startup and before capability-dependent jobs. `getCapabilities({ refresh: true })` forces a refresh. Missing capabilities remain unknown. Installation flags do not grant bot permissions.

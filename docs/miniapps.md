@@ -13,13 +13,13 @@ registry availability and pin reviewed versions in your lockfile before rollout.
 ## Connect at the application boundary
 
 ```ts
-import { createMiniAppClient, MiniAppError } from '@lo-ink/miniapp-sdk';
-import { createAdapter } from '@lo-ink/adapter-lo';
+import { createMiniAppClient, MiniAppError } from "@lo-ink/miniapp-sdk";
+import { createAdapter } from "@lo-ink/adapter-lo";
 
 const adapter = createAdapter();
-if (!adapter) throw new Error('Open this application inside LO');
+if (!adapter) throw new Error("Open this application inside LO");
 const client = createMiniAppClient(adapter);
-if (client.supports('ready')) await client.call('ready', undefined);
+if (client.supports("ready")) await client.call("ready", undefined);
 ```
 
 Pass the client to features. UI components receive values and user actions;
@@ -31,16 +31,17 @@ For an existing application on older LO clients, explicitly choose the separate
 ## Capabilities and lifecycle
 
 ```ts
-if (client.supports('requestWriteAccess')) {
-  const allowed = await client.call('requestWriteAccess', undefined);
+if (client.supports("requestWriteAccess")) {
+  const allowed = await client.call("requestWriteAccess", undefined);
   showMessagePermission(allowed);
 }
 renderTheme(client.adapter.snapshot().theme);
 let stopTheme = () => {};
 try {
-  stopTheme = client.on('themeChanged', ({ theme }) => renderTheme(theme));
+  stopTheme = client.on("themeChanged", ({ theme }) => renderTheme(theme));
 } catch (error) {
-  if (!(error instanceof MiniAppError) || error.code !== 'unsupported') throw error;
+  if (!(error instanceof MiniAppError) || error.code !== "unsupported")
+    throw error;
   // Keep snapshot-only rendering when the host has no live theme events.
 }
 

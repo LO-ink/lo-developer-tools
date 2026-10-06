@@ -32,22 +32,22 @@ The deployment mapping is direct: `entryUrl` becomes `MiniAppSettings.url`, whil
 Optional `capabilities` declares distinct names; runtime availability is still negotiated with the host. Applications can reuse the validator without invoking the CLI:
 
 ```ts
-import { validateManifest } from '@lo-ink/developer-tools';
+import { validateManifest } from "@lo-ink/developer-tools";
 
 const issues = validateManifest(value, { publication: true });
 ```
 
 ## Repositories
 
-| Repository | Responsibility |
-| --- | --- |
-| [lo-miniapp-sdk](https://github.com/lo-ink/lo-miniapp-sdk) | Application API, protocol and lifecycle |
-| [lo-ui](https://github.com/lo-ink/lo-ui) | Design tokens and web UI |
-| [lo-platform-adapters](https://github.com/lo-ink/lo-platform-adapters) | Host integrations and compatibility |
-| [lo-bot-sdk](https://github.com/lo-ink/lo-bot-sdk) | Server-side bot clients |
-| [lo-developer-tools](https://github.com/lo-ink/lo-developer-tools) | Tooling, documentation and templates |
+| Repository                                                             | Responsibility                          |
+| ---------------------------------------------------------------------- | --------------------------------------- |
+| [lo-miniapp-sdk](https://github.com/lo-ink/lo-miniapp-sdk)             | Application API, protocol and lifecycle |
+| [lo-ui](https://github.com/lo-ink/lo-ui)                               | Design tokens and web UI                |
+| [lo-platform-adapters](https://github.com/lo-ink/lo-platform-adapters) | Host integrations and compatibility     |
+| [lo-bot-sdk](https://github.com/lo-ink/lo-bot-sdk)                     | Server-side bot clients                 |
+| [lo-developer-tools](https://github.com/lo-ink/lo-developer-tools)     | Tooling, documentation and templates    |
 
-Package source, registry publication and released-host support are separate states. Check the package release notes and required runtime capabilities before upgrading consumers.
+Package source, registry publication and released-host support are separate states. Check the package version and required runtime capabilities before upgrading consumers.
 
 ## Development
 
@@ -58,16 +58,27 @@ npm test
 npm pack --dry-run
 ```
 
-See [architecture](docs/architecture.md) for package boundaries and [migration](docs/migration.md) for the delivery stages.
+See [architecture](docs/architecture.md) for package boundaries and [migration](docs/migration.md) for application upgrades.
 
 Application guides: [build a native LO Mini App](docs/miniapps.md) and
 [build a native LO bot](docs/bots.md).
 
 Migration and compatibility guides live in [lo-platform-adapters](https://github.com/LO-ink/lo-platform-adapters).
 
-## Мини-приложение и бот
+## Mini-app and bot guides
 
-- [Пуши из мини-приложения](docs/miniapp-pushes.md): привязка бота, согласие, серверная подпись, медиа и очередь.
-- [Bot API: методы, файлы и отказы](docs/bot-api.md).
-- [Безопасность токена и доступ к группам](docs/bot-credentials.md).
-- [Звук в мини-играх](docs/miniapp-audio.md).
+- [Messages from a mini-app](docs/miniapp-pushes.md): bot association, consent, signed launch data, media and delivery queues.
+- [Bot API methods, files and failures](docs/bot-api.md).
+- [Bot credentials and group access](docs/bot-credentials.md).
+- [Audio in mini-games](docs/miniapp-audio.md).
+
+## Quality checks
+
+Run `make install` and `make ci` with Node.js 22.13 or newer. The same targets run
+in GitHub Actions. CI checks formatting, ESLint (including typed promises),
+TypeScript, dependency cycles and package boundaries, tests, published package
+contents, vulnerable dependencies and secrets. English documentation and comments
+are enforced; unfinished development notes and retired repository URLs fail CI.
+
+Coverage includes unimported production files and fails below 85% lines and
+statements, 80% functions, or 75% branches. Reports are uploaded as CI artifacts.

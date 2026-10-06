@@ -1,6 +1,6 @@
 {
   "name": "@lo-ink/developer-tools",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Project validation and development tools for LO applications",
   "type": "module",
   "license": "MIT",
@@ -20,7 +20,6 @@
     "docs",
     "README.md",
     "LICENSE",
-    "CHANGELOG.md",
     "security"
   ],
   "engines": {
@@ -28,7 +27,17 @@
   },
   "scripts": {
     "test": "node --test test/*.test.mjs",
-    "check": "node --check bin/lo.mjs && node --check src/manifest.mjs"
+    "check": "node --check bin/lo.mjs && node --check src/manifest.mjs && node --check actions/publish-npm/publish.mjs",
+    "lint": "eslint . --max-warnings 0",
+    "architecture": "depcruise --config .dependency-cruiser.cjs src bin actions",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "security": "npm audit --audit-level=high",
+    "test:coverage": "c8 node --test test/*.test.mjs",
+    "build": "npm pack --dry-run",
+    "policy": "node scripts/check-policy.mjs",
+    "secrets": "node scripts/check-secrets.mjs",
+    "ci": "make ci"
   },
   "publishConfig": {
     "access": "public"
@@ -36,5 +45,14 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/LO-ink/lo-developer-tools.git"
+  },
+  "devDependencies": {
+    "eslint": "10.12.0",
+    "@eslint/js": "10.0.1",
+    "typescript-eslint": "8.71.1",
+    "globals": "16.5.0",
+    "dependency-cruiser": "17.4.3",
+    "prettier": "3.9.6",
+    "c8": "12.0.0"
   }
 }
