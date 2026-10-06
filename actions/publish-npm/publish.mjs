@@ -70,7 +70,13 @@ export async function publishedVersion(pkg, fetcher = fetch) {
 
 export async function publishPackages(
   packages,
-  { fetcher = fetch, execute = execFileSync, log = console.log } = {},
+  {
+    fetcher = fetch,
+    execute = execFileSync,
+    log = console.log,
+    wait = (ms) => new Promise((done) => setTimeout(done, ms)),
+    verificationAttempts = 30,
+  } = {},
 ) {
   // npm ci links local workspaces, including versions already in the registry.
   // Build dependencies before packing any remaining unpublished dependent.
@@ -140,12 +146,17 @@ export async function publishPackages(
         },
       );
       let metadata;
-      for (let attempt = 0; attempt < 10; attempt++) {
+      for (let attempt = 0; attempt < verificationAttempts; attempt++) {
         metadata = await publishedVersion(pkg, fetcher);
         if (metadata) break;
-        await new Promise((done) => setTimeout(done, 3_000));
+        if (attempt + 1 < verificationAttempts) await wait(10_000);
       }
-      if (metadata?.dist?.integrity !== integrity)
+      if (!metadata) {
+        throw new Error(
+          "Registry accepted the upload but the version is not public yet; do not resend the archive while processing continues",
+        );
+      }
+      if (metadata.dist?.integrity !== integrity)
         throw new Error(
           "Public registry integrity does not match the uploaded archive",
         );
