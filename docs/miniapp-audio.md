@@ -1,32 +1,29 @@
-# Звук в мини-играх
+# Audio in mini-games
 
-На хостах LO, требующих жест для медиа, `AudioContext` после создания остаётся
-`suspended`. Пытайтесь активировать его при старте и ещё раз на первом касании.
-Ошибка автозапуска не должна блокировать игру или порождать необработанный Promise.
+Some LO WebViews require a user gesture for media playback. A new AudioContext may remain suspended. Try activation at startup and on a user gesture; a playback refusal must remain observable without blocking the game.
 
 ```ts
 const audio = new AudioContext();
 const resume = async () => {
-  if (audio.state === "suspended") {
-    try { await audio.resume(); } catch { /* Повтор на следующем жесте. */ }
+  if (audio.state !== "suspended") return;
+  try {
+    await audio.resume();
+  } catch (error) {
+    showAudioError(error); // Let the person enable audio on the next gesture.
   }
 };
-const onGesture = () => { void resume(); };
+const onGesture = () => {
+  void resume();
+};
 void resume();
 window.addEventListener("pointerdown", onGesture);
-// При размонтировании игры:
-const disposeAudio = () => {
+
+const disposeAudio = async () => {
   window.removeEventListener("pointerdown", onGesture);
-  void audio.close();
+  await audio.close();
 };
 ```
 
-Отдельный переключатель звука должен оставаться доступным. Если контекст не
-запустился после жеста, покажите состояние и разрешите повторное включение.
-Для HTML `<audio>` также обработайте отказ `play()` и повторите его из обработчика
-касания. Фоновый звук останавливайте при деактивации мини-приложения.
+Keep a sound toggle available. If activation fails after a gesture, show its state and allow another attempt. Handle HTML audio.play() rejection in the same way and invoke playback from the gesture handler. Stop background audio when the mini-app deactivates.
 
-Подготовленная настройка WebView — `mediaPlaybackRequiresUserAction={false}` и
-`allowsInlineMediaPlayback` в хосте. На 02.10.2026 выпуск этой правки не подтверждён;
-**номера версии, начиная с которой жест не требуется, пока нет**. Не обещайте
-автозапуск по номеру сборки и проверяйте состояние контекста на устройстве.
+Check the context on the device; do not infer autoplay permission from the host's version number.

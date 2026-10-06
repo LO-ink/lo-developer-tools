@@ -10,7 +10,7 @@ Create one client for the application's lifetime and dispose it when its owner u
 
 For older LO installations, select `@lo-ink/adapter-lo-legacy` explicitly. Migration from other APIs is documented in [LO adapters](https://github.com/lo-ink/lo-platform-adapters/tree/main/docs); compatibility is opt-in.
 
-When upgrading from Mini App SDK 0.19 to 0.20, import server verification from `@lo-ink/miniapp-sdk/server`, keep unverified `launchUnsafe` data for display only, and use `bindSafeAreaCss` to combine system and application insets. Version 0.20.1 also fixes cleanup and appearance fallback behavior.
+When upgrading from Mini App SDK 0.19 to 0.20, import server verification from `@lo-ink/miniapp-sdk/server`, keep unverified `launchUnsafe` data for display only, and use `bindSafeAreaCss` to combine system and application insets.
 
 Bot SDK 0.4 adds video, cached audio, albums and file downloads. Text is limited to 4096 UTF-16 units, captions to 1024. Media and edit operations accept inline keyboards. Uploaded video metadata cannot accompany cached file IDs. An explicit `retryRejected` can repeat one safe 429 refusal; it must not repeat uncertain sends or consumed streams.
 
