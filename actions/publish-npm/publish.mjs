@@ -75,7 +75,7 @@ export async function publishPackages(
     execute = execFileSync,
     log = console.log,
     wait = (ms) => new Promise((done) => setTimeout(done, ms)),
-    verificationAttempts = 30,
+    verificationAttempts = 180,
   } = {},
 ) {
   // npm ci links local workspaces, including versions already in the registry.
