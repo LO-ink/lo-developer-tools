@@ -69,6 +69,7 @@ Migration and compatibility guides live in [lo-platform-adapters](https://github
 
 - [Messages from a mini-app](docs/miniapp-pushes.md): bot association, consent, signed launch data, media and delivery queues.
 - [Bot API methods, files and failures](docs/bot-api.md).
+- [Build a secretary with owner consent and review](docs/secretary.md).
 - [Bot credentials and group access](docs/bot-credentials.md).
 - [Audio in mini-games](docs/miniapp-audio.md).
 
