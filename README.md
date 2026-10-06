@@ -82,3 +82,8 @@ are enforced; unfinished development notes and retired repository URLs fail CI.
 
 Coverage includes unimported production files and fails below 85% lines and
 statements, 80% functions, or 75% branches. Reports are uploaded as CI artifacts.
+
+Repository policy checks require Python 3 for Python comment tokenization. YAML
+comments are parsed as YAML; embedded scripts and localized scalar values retain
+their own language. LO credentials are checked by the root Gitleaks configuration
+and a synthetic scanner regression before each repository scan.
