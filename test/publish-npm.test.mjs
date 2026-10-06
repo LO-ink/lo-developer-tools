@@ -330,3 +330,39 @@ test("repository metadata must preserve the case of the GitHub provenance identi
     rmSync(root, { recursive: true, force: true });
   }
 });
+
+test("an accepted upload can take several minutes to become public without a second upload", async () => {
+  const commands = [];
+  const delays = [];
+  let lookups = 0;
+  const result = await publishPackages([{ ...identity, cwd: tmpdir() }], {
+    fetcher: async () =>
+      ++lookups < 18
+        ? response(404)
+        : response(200, { ...identity, dist: { integrity } }),
+    execute: executor(commands),
+    wait: async (ms) => {
+      delays.push(ms);
+    },
+    log: () => {},
+  });
+  assert.equal(result[0].status, "published");
+  assert.equal(commands.filter((args) => args[0] === "publish").length, 1);
+  assert.equal(delays.length, 16);
+  assert.ok(delays.every((ms) => ms === 10_000));
+});
+
+test("an accepted version still processing fails with a pending error rather than a false integrity mismatch", async () => {
+  const commands = [];
+  await assert.rejects(
+    publishPackages([{ ...identity, cwd: tmpdir() }], {
+      fetcher: async () => response(404),
+      execute: executor(commands),
+      verificationAttempts: 2,
+      wait: async () => {},
+      log: () => {},
+    }),
+    /accepted the upload but the version is not public yet/,
+  );
+  assert.equal(commands.filter((args) => args[0] === "publish").length, 1);
+});
