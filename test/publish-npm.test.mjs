@@ -23,6 +23,13 @@ import {
 const identity = { name: "@lo-ink/example", version: "1.2.3" };
 const archive = Buffer.from("tested package archive");
 const integrity = `sha512-${createHash("sha512").update(archive).digest("base64")}`;
+const tarball = "https://registry.npmjs.org/lo-ink-example-1.2.3.tgz";
+const publicMetadata = { ...identity, dist: { integrity, tarball } };
+const archiveResponse = () => ({
+  status: 200,
+  ok: true,
+  arrayBuffer: async () => archive,
+});
 const response = (status, body) => ({
   status,
   ok: status === 200,
@@ -70,7 +77,8 @@ test("unexpected registry identity and malformed metadata stop publication", asy
 test("already published immutable versions are packed and verified without republishing", async () => {
   const commands = [];
   const result = await publishPackages([identity], {
-    fetcher: async () => response(200, { ...identity, dist: { integrity } }),
+    fetcher: async (url) =>
+      url === tarball ? archiveResponse() : response(200, publicMetadata),
     execute: executor(commands),
     log: () => {},
   });
@@ -317,10 +325,12 @@ test("the exact packed archive is published once and public integrity is checked
   const commands = [];
   let lookup = 0;
   const result = await publishPackages([{ ...identity, cwd: tmpdir() }], {
-    fetcher: async () =>
-      ++lookup === 1
-        ? response(404)
-        : response(200, { ...identity, dist: { integrity } }),
+    fetcher: async (url) =>
+      url === tarball
+        ? archiveResponse()
+        : ++lookup === 1
+          ? response(404)
+          : response(200, publicMetadata),
     execute: executor(commands),
     log: () => {},
   });
@@ -489,10 +499,12 @@ test("an accepted upload can take several minutes to become public without a sec
   const delays = [];
   let lookups = 0;
   const result = await publishPackages([{ ...identity, cwd: tmpdir() }], {
-    fetcher: async () =>
-      ++lookups < 18
-        ? response(404)
-        : response(200, { ...identity, dist: { integrity } }),
+    fetcher: async (url) =>
+      url === tarball
+        ? archiveResponse()
+        : ++lookups < 18
+          ? response(404)
+          : response(200, publicMetadata),
     execute: executor(commands),
     wait: async (ms) => {
       delays.push(ms);
@@ -518,4 +530,133 @@ test("an accepted version still processing fails with a pending error rather tha
     /accepted the upload but the version is not public yet/,
   );
   assert.equal(commands.filter((args) => args[0] === "publish").length, 1);
+});
+
+test("existing and newly uploaded metadata wait for canonical archive bytes before reporting success", async () => {
+  for (const existing of [false, true]) {
+    const commands = [],
+      delays = [],
+      messages = [];
+    let lookups = 0,
+      downloads = 0;
+    const result = await publishPackages([identity], {
+      fetcher: async (url, options) => {
+        if (url === tarball) {
+          assert.equal(options.redirect, "error");
+          assert.equal(
+            messages.length,
+            0,
+            "success was logged before download verification",
+          );
+          return ++downloads < 3 ? response(404) : archiveResponse();
+        }
+        return ++lookups === 1 && !existing
+          ? response(404)
+          : response(200, publicMetadata);
+      },
+      execute: executor(commands),
+      wait: async (ms) => delays.push(ms),
+      verificationAttempts: 3,
+      log: (message) => messages.push(message),
+    });
+    assert.equal(
+      result[0].status,
+      existing ? "already published" : "published",
+    );
+    assert.equal(downloads, 3);
+    assert.deepEqual(delays, [10_000, 10_000]);
+    assert.equal(
+      commands.filter((args) => args[0] === "publish").length,
+      existing ? 0 : 1,
+    );
+    assert.equal(messages.length, 1);
+  }
+});
+
+test("metadata without a downloadable archive never succeeds or resubmits an accepted upload", async () => {
+  for (const existing of [false, true]) {
+    const commands = [];
+    let lookups = 0,
+      downloads = 0;
+    await assert.rejects(
+      publishPackages([identity], {
+        fetcher: async (url) => {
+          if (url === tarball) {
+            downloads++;
+            return response(404);
+          }
+          return ++lookups === 1 && !existing
+            ? response(404)
+            : response(200, publicMetadata);
+        },
+        execute: executor(commands),
+        wait: async () => {},
+        verificationAttempts: 2,
+        log: () => assert.fail("unavailable package reported success"),
+      }),
+      /archive is not public yet; do not resend/,
+    );
+    assert.equal(downloads, 2);
+    assert.equal(
+      commands.filter((args) => args[0] === "publish").length,
+      existing ? 0 : 1,
+    );
+  }
+});
+
+test("an unavailable existing archive blocks every upload including an earlier new package", async () => {
+  const commands = [];
+  await assert.rejects(
+    publishPackages(
+      [{ ...identity, name: "@lo-ink/new", cwd: "new" }, identity],
+      {
+        fetcher: async (url) =>
+          url === tarball || url.includes("%2Fnew")
+            ? response(404)
+            : response(200, publicMetadata),
+        execute: contentExecutor(commands, archive),
+        wait: async () => {},
+        verificationAttempts: 2,
+        log: () => assert.fail("unavailable package reported success"),
+      },
+    ),
+    /archive is not public yet; do not resend/,
+  );
+  assert.equal(commands.filter((args) => args[0] === "publish").length, 0);
+});
+
+test("matching SHA-512 metadata cannot hide corrupt or inaccessible public bytes", async () => {
+  for (const existing of [false, true]) {
+    for (const [download, pattern] of [
+      [
+        {
+          status: 200,
+          ok: true,
+          arrayBuffer: async () => Buffer.from("corrupt"),
+        },
+        /archive integrity mismatch/,
+      ],
+      [response(503), /archive lookup failed: HTTP 503/],
+    ]) {
+      const commands = [];
+      let lookups = 0;
+      await assert.rejects(
+        publishPackages([identity], {
+          fetcher: async (url) =>
+            url === tarball
+              ? download
+              : ++lookups === 1 && !existing
+                ? response(404)
+                : response(200, publicMetadata),
+          execute: executor(commands),
+          log: () => assert.fail("unverified package reported success"),
+        }),
+        pattern,
+      );
+      assert.equal(
+        commands.filter((args) => args[0] === "publish").length,
+        existing ? 0 : 1,
+      );
+    }
+  }
 });

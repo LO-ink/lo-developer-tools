@@ -49,21 +49,13 @@ function archiveContents(archive) {
   return entries;
 }
 
-async function verifyPublishedContents(
-  pkg,
-  metadata,
-  archive,
-  integrity,
-  destination,
-  fetcher,
-) {
+async function publishedArchive(metadata, fetcher) {
   const publishedIntegrity = metadata.dist?.integrity;
   if (
     typeof publishedIntegrity !== "string" ||
     !publishedIntegrity.startsWith("sha512-")
   )
     throw new Error("Published package has no SHA-512 integrity");
-  if (publishedIntegrity === integrity) return;
   const tarball = new URL(metadata.dist?.tarball);
   if (
     tarball.origin !== registry ||
@@ -76,6 +68,7 @@ async function verifyPublishedContents(
     signal: AbortSignal.timeout(30_000),
     redirect: "error",
   });
+  if (response.status === 404) return null;
   if (!response.ok)
     throw new Error(`Registry archive lookup failed: HTTP ${response.status}`);
   const bytes = Buffer.from(await response.arrayBuffer());
@@ -84,10 +77,35 @@ async function verifyPublishedContents(
     publishedIntegrity
   )
     throw new Error("Published archive integrity mismatch");
-  const publishedArchive = join(destination, "published.tgz");
-  writeFileSync(publishedArchive, bytes);
+  return bytes;
+}
+
+async function verifyPublishedContents(
+  pkg,
+  metadata,
+  archive,
+  integrity,
+  destination,
+  fetcher,
+  wait,
+  verificationAttempts,
+) {
+  let bytes;
+  for (let attempt = 0; attempt < verificationAttempts; attempt++) {
+    bytes = await publishedArchive(metadata, fetcher);
+    if (bytes) break;
+    if (attempt + 1 < verificationAttempts) await wait(10_000);
+  }
+  if (!bytes)
+    throw new Error(
+      "Published package metadata exists but its archive is not public yet; do not resend the archive while processing continues",
+    );
+  // Matching metadata alone does not prove consumers can download the package.
+  if (metadata.dist.integrity === integrity) return;
+  const publishedPath = join(destination, "published.tgz");
+  writeFileSync(publishedPath, bytes);
   const actual = archiveContents(archive),
-    published = archiveContents(publishedArchive);
+    published = archiveContents(publishedPath);
   if (
     actual.size !== published.size ||
     [...actual].some(([path, digest]) => published.get(path) !== digest)
@@ -222,6 +240,8 @@ export async function publishPackages(
           integrity,
           destination,
           fetcher,
+          wait,
+          verificationAttempts,
         );
       prepared.push({ pkg, existing, archive, integrity });
     }
@@ -253,10 +273,17 @@ export async function publishPackages(
           stdio: "inherit",
         },
       );
-      let metadata;
+      let metadata, bytes;
       for (let attempt = 0; attempt < verificationAttempts; attempt++) {
         metadata = await publishedVersion(pkg, fetcher);
-        if (metadata) break;
+        if (metadata) {
+          if (metadata.dist?.integrity !== integrity)
+            throw new Error(
+              "Public registry integrity does not match the uploaded archive",
+            );
+          bytes = await publishedArchive(metadata, fetcher);
+          if (bytes) break;
+        }
         if (attempt + 1 < verificationAttempts) await wait(10_000);
       }
       if (!metadata) {
@@ -264,9 +291,9 @@ export async function publishPackages(
           "Registry accepted the upload but the version is not public yet; do not resend the archive while processing continues",
         );
       }
-      if (metadata.dist?.integrity !== integrity)
+      if (!bytes)
         throw new Error(
-          "Public registry integrity does not match the uploaded archive",
+          "Registry accepted the upload but its archive is not public yet; do not resend the archive while processing continues",
         );
       log(`${pkg.name}@${pkg.version}: published and verified`);
       results.push({
