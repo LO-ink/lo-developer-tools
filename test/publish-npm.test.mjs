@@ -297,3 +297,36 @@ test("workspace packages are released in dependency order", () => {
     rmSync(root, { recursive: true, force: true });
   }
 });
+
+test("repository metadata must preserve the case of the GitHub provenance identity", () => {
+  const root = mkdtempSync(join(tmpdir(), "lo-release-provenance-"));
+  try {
+    for (const url of [
+      "https://github.com/LO-ink/example",
+      "https://github.com/LO-ink/example.git",
+      "git+https://github.com/LO-ink/example.git",
+    ]) {
+      writeFileSync(
+        join(root, "package.json"),
+        JSON.stringify({ ...identity, repository: { url } }),
+      );
+      assert.equal(readPackages(root, ["."], "LO-ink/example").length, 1);
+    }
+    for (const url of [
+      "https://github.com/lo-ink/example.git",
+      "git+https://github.com/lo-ink/example.git",
+      "https://github.com/LO-ink/Example.git",
+    ]) {
+      writeFileSync(
+        join(root, "package.json"),
+        JSON.stringify({ ...identity, repository: { url } }),
+      );
+      assert.throws(
+        () => readPackages(root, ["."], "LO-ink/example"),
+        /Repository metadata/,
+      );
+    }
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});

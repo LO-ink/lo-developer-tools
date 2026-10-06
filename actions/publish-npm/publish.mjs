@@ -30,9 +30,7 @@ export function readPackages(root, directories, repository) {
     const url = pkg.repository?.url
       ?.replace(/^git\+/, "")
       .replace(/\.git$/, "");
-    if (
-      url?.toLowerCase() !== `https://github.com/${repository}`.toLowerCase()
-    ) {
+    if (url !== `https://github.com/${repository}`) {
       throw new Error(`Repository metadata does not match ${pkg.name}`);
     }
     return { ...pkg, cwd };
