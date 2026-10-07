@@ -16,8 +16,10 @@ import { join } from "node:path";
 import { test } from "node:test";
 import {
   publishedVersion,
-  publishPackages,
+  publishPackages as publishAction,
   readPackages,
+  compareVersions,
+  assertCurrentMain,
 } from "../actions/publish-npm/publish.mjs";
 
 const identity = { name: "@lo-ink/example", version: "1.2.3" };
@@ -34,6 +36,217 @@ const response = (status, body) => ({
   status,
   ok: status === 200,
   json: async () => body,
+});
+
+// Keep archive-processing regressions independent from tag-propagation fixtures.
+function publishPackages(packages, options = {}) {
+  return publishAction(packages, {
+    ...options,
+    tagFetcher:
+      options.tagFetcher ??
+      (async () =>
+        response(200, {
+          name: packages[0].name,
+          "dist-tags": {
+            latest: packages[0].version,
+            next: packages[0].version,
+          },
+        })),
+  });
+}
+
+function tagFixture(version, initialTags = {}) {
+  const pkg = { ...identity, version };
+  const tags = { ...initialTags };
+  const commands = [];
+  let published = false;
+  const options = {
+    log: () => {},
+    wait: async () => {},
+    verificationAttempts: 3,
+    fetcher: async (url) => {
+      if (url === tarball) return archiveResponse();
+      if (url === `https://registry.npmjs.org/${encodeURIComponent(pkg.name)}`)
+        return response(200, { name: pkg.name, "dist-tags": tags });
+      return published
+        ? response(200, { ...pkg, dist: { integrity, tarball } })
+        : response(404);
+    },
+    execute(command, args) {
+      assert.equal(command, "npm");
+      commands.push(args);
+      if (args[0] === "run") return;
+      if (args[0] === "pack") {
+        writeFileSync(join(args.at(-1), "fixture.tgz"), archive);
+        return JSON.stringify([{ ...pkg, filename: "fixture.tgz", integrity }]);
+      }
+      assert.equal(
+        args[0],
+        "publish",
+        "no separate dist-tag mutation is authorized",
+      );
+      published = true;
+      tags[args[args.indexOf("--tag") + 1]] = version;
+    },
+  };
+  return { pkg, tags, commands, options };
+}
+
+test("release ordering follows semantic versions including numeric prerelease identifiers", () => {
+  for (const [older, newer] of [
+    ["1.9.0", "1.10.0"],
+    ["1.0.0-alpha", "1.0.0-alpha.1"],
+    ["1.0.0-beta.9", "1.0.0-beta.10"],
+    ["1.0.0-10", "1.0.0-alpha"],
+    ["1.0.0-rc.1", "1.0.0"],
+    ["999999999999999999.0.0", "1000000000000000000.0.0"],
+  ]) {
+    assert.equal(compareVersions(older, newer), -1);
+    assert.equal(compareVersions(newer, older), 1);
+  }
+  assert.equal(compareVersions("1.2.3+first", "1.2.3+second"), 0);
+  for (const value of ["01.2.3", "1.2", "1.2.3-01", "1.2.3-alpha..1", null])
+    assert.throws(() => compareVersions(value, "1.2.3"), /semantic version/);
+});
+
+test("a delayed old stable or prerelease upload preserves the newer channel tag", async () => {
+  for (const [version, tag, current] of [
+    ["1.0.0", "latest", "2.0.0"],
+    ["1.0.0-beta.9", "next", "1.0.0-beta.10"],
+  ]) {
+    const fixture = tagFixture(version, { [tag]: current });
+    const result = await publishAction([fixture.pkg], fixture.options);
+    assert.equal(fixture.tags[tag], current);
+    assert.equal(result[0].tag, `release-${version}`);
+    assert.equal(result[0].tagVersion, version);
+    assert.equal(
+      fixture.commands.filter((args) => args[0] === "publish").length,
+      1,
+    );
+  }
+});
+
+test("newer releases use their channel and report the verified tag", async () => {
+  for (const [version, tag, current] of [
+    ["1.10.0", "latest", "1.9.0"],
+    ["1.0.0-beta.10", "next", "1.0.0-beta.9"],
+  ]) {
+    const fixture = tagFixture(version, { [tag]: current });
+    const result = await publishAction([fixture.pkg], fixture.options);
+    assert.equal(result[0].tag, tag);
+    assert.equal(result[0].tagVersion, version);
+  }
+});
+
+test("tag selection refreshes registry state after archive preflight", async () => {
+  const fixture = tagFixture("1.0.0", { latest: "0.9.0" });
+  const fetcher = fixture.options.fetcher;
+  let reads = 0;
+  fixture.options.fetcher = async (url) => {
+    if (url.endsWith(encodeURIComponent(identity.name)) && ++reads === 2)
+      fixture.tags.latest = "2.0.0";
+    return fetcher(url);
+  };
+  await publishAction([fixture.pkg], fixture.options);
+  assert.equal(fixture.tags.latest, "2.0.0");
+  assert.equal(fixture.tags["release-1.0.0"], "1.0.0");
+});
+
+test("source freshness checks local HEAD, event SHA and exact current remote main", () => {
+  const sha = "a".repeat(40),
+    other = "b".repeat(40);
+  for (const [head, remote, valid] of [
+    [sha, `${sha}\trefs/heads/main`, true],
+    [other, `${sha}\trefs/heads/main`, false],
+    [sha, `${other}\trefs/heads/main`, false],
+    [sha, `${sha}\trefs/heads/other`, false],
+  ]) {
+    const check = () =>
+      assertCurrentMain({
+        root: "/fixture",
+        repository: "LO-ink/example",
+        sha,
+        execute(command, args) {
+          assert.equal(command, "git");
+          return args[0] === "rev-parse" ? head : remote;
+        },
+      });
+    if (valid) check();
+    else assert.throws(check, /stale/);
+  }
+  assert.throws(
+    () => assertCurrentMain({ repository: "bad\nurl", sha }),
+    /identity/,
+  );
+  assert.throws(
+    () => assertCurrentMain({ repository: "LO-ink/example", sha: "bad" }),
+    /identity/,
+  );
+  assert.throws(
+    () =>
+      assertCurrentMain({
+        repository: "LO-ink/example",
+        sha,
+        execute() {
+          throw new Error("remote unavailable");
+        },
+      }),
+    /remote unavailable/,
+  );
+});
+
+test("a stale source is rejected immediately before upload without a registry mutation", async () => {
+  const fixture = tagFixture("1.2.3");
+  await assert.rejects(
+    publishAction([fixture.pkg], {
+      ...fixture.options,
+      beforePublish: () => {
+        throw new Error("stale source");
+      },
+    }),
+    /stale source/,
+  );
+  assert.equal(
+    fixture.commands.some((args) => args[0] === "publish"),
+    false,
+  );
+});
+
+test("malformed or unavailable tag metadata blocks upload", async () => {
+  for (const failure of [
+    response(503),
+    response(401),
+    response(200, { name: identity.name }),
+    response(200, { name: identity.name, "dist-tags": { latest: "01.0.0" } }),
+    response(200, { name: "@lo-ink/other", "dist-tags": {} }),
+  ]) {
+    const fixture = tagFixture("1.2.3");
+    await assert.rejects(
+      publishAction([fixture.pkg], {
+        ...fixture.options,
+        tagFetcher: async () => failure,
+      }),
+    );
+    assert.equal(
+      fixture.commands.some((args) => args[0] === "publish"),
+      false,
+    );
+  }
+});
+
+test("missing public tag waits after upload and never resends the archive", async () => {
+  const fixture = tagFixture("1.2.3");
+  await assert.rejects(
+    publishAction([fixture.pkg], {
+      ...fixture.options,
+      tagFetcher: async () => response(404),
+    }),
+    /release tag is not public yet/,
+  );
+  assert.equal(
+    fixture.commands.filter((args) => args[0] === "publish").length,
+    1,
+  );
 });
 
 test("a missing version is distinguished from registry outages and authentication failures", async () => {
