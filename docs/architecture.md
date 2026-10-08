@@ -2,7 +2,7 @@
 
 ## Ownership
 
-The SDK describes application intent with LO types and operations. It does not select a host implicitly or load another platform's scripts at module import. A caller chooses an adapter. Construction returns a ready client or fails; unsupported required capabilities fail explicitly. Subscriptions return cleanup handles. Pending work has bounded lifetime and cancellation.
+The SDK describes application intent with LO types and operations. New LO applications call `createLoClient` at their composition root; it discovers the native LO port and returns a client or null outside the host. No additional adapter is required. Importing the package does not discover a host or load scripts. Unsupported required capabilities fail explicitly. Subscriptions return cleanup handles. Pending work has bounded lifetime and cancellation.
 
 The UI receives values and emits user actions. It does not authenticate, fetch, publish, request permissions, or detect a host. Theme tokens, safe area values and integration state reach it through composition. React hooks belong to an optional SDK integration package; using the SDK does not require React.
 
@@ -14,15 +14,13 @@ Bot clients are server-side consumers with distinct credentials. Browser SDK pac
 
 Server RPC schemas remain owned by the existing schema repository. Public protocol packages include only the reviewed application-facing contract. Generated RPC code is generated from pinned schema revisions; it is not a second manually maintained source.
 
-## Compatibility directions
+## Native composition
 
-Outbound adapters let an application using the LO API run in another host. Inbound compatibility lets an existing application's supported foreign API calls run inside LO. These are separate entrypoints with separate test suites and support statements.
-
-Legacy globals and wire names are allowed only in compatibility modules. The composition root may install them; SDK core and UI may not inspect them. Bot HTTP compatibility similarly translates at the server edge before domain operations.
+The native Mini App SDK owns host discovery, protocol validation and request lifecycle. The Bot SDK's `createLoBotClient` owns the LO HTTP transport at the server boundary. UI and developer tools depend on neither transport. A failed or unavailable operation cannot select a different transport. Keep launch assertions, bot credentials and application sessions in their respective trust boundaries.
 
 ## Distribution
 
-Packages have explicit export maps. Consumers use public entrypoints, not repository internals. Core packages and adapters release independently with supported version ranges and tested combinations. A compatibility layer must remain available for the agreed deprecation window; a native rollout cannot assume all mini-app deployments update at once.
+Packages have explicit export maps. Consumers use public entrypoints, not repository internals. Native packages release independently with supported version ranges and tested combinations. Existing immutable releases remain available; a rollout cannot assume all mini-app deployments update at once.
 
 Use a registry release when namespace ownership and publication credentials are configured. Until then, a release archive must contain reproducible built packages with checksums and pinned consumer lockfile integrity. Never publish a Git-only package whose install depends on private repositories or a developer's local paths.
 
@@ -30,7 +28,7 @@ Use a registry release when namespace ownership and publication credentials are 
 
 - Compile the public call sites as part of CI.
 - Test success, unsupported capabilities, permission denial, timeout, cancellation, late responses and disposal.
-- Test adapters against upstream API contracts separately from native integration tests.
+- Test the native port and server HTTP contracts independently, then exercise their composition inside LO.
 - Reject reverse dependencies from SDK/UI into adapters or application internals.
 - Check accessible names, keyboard/focus behavior, text scaling, contrast and reduced motion for UI components.
 - Verify packed artifacts in a clean consumer project.

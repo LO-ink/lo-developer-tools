@@ -63,7 +63,7 @@ See [architecture](docs/architecture.md) for package boundaries and [migration](
 Application guides: [build a native LO Mini App](docs/miniapps.md) and
 [build a native LO bot](docs/bots.md).
 
-Migration and compatibility guides live in [lo-platform-adapters](https://github.com/LO-ink/lo-platform-adapters).
+New LO applications import the native SDK factories directly; no additional LO adapter is required.
 
 ## Mini-app and bot guides
 

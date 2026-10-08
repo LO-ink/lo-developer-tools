@@ -1,6 +1,6 @@
 {
   "name": "@lo-ink/developer-tools",
-  "version": "0.3.4",
+  "version": "0.3.5",
   "description": "Project validation and development tools for LO applications",
   "type": "module",
   "license": "MIT",

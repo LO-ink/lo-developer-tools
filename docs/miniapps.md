@@ -23,9 +23,9 @@ if (client.supports("ready")) await client.call("ready", undefined);
 
 Pass the client to features. UI components receive values and user actions;
 they do not select hosts, load scripts or render authoritative permission prompts.
-Native discovery uses only the LO port. It never silently adds older host APIs.
-For an existing application on older LO clients, explicitly choose the separate
-`@lo-ink/adapter-lo-legacy` integration until all required native features ship.
+Native discovery uses only the LO port. There is no additional LO adapter to
+install. If the host lacks a required capability, explain the requirement to
+the user and keep that action unavailable.
 
 ## Capabilities and lifecycle
 
@@ -60,7 +60,7 @@ The host and device determine actual features. The current native transport does
 not advertise invoices. Story presentation and vertical dismissal require their
 capabilities in the corresponding LO host release; older ports omit them. A
 contract declaration alone is not host support. Record missing features and
-choose explicit older-host integration when required.
+test required operations on the LO client builds your application supports.
 
 ## Authenticate on your server
 
@@ -78,5 +78,4 @@ Exercise the public package entrypoints, permission decline, teardown,
 cancellation, late responses, host appearance and required native operations.
 Record the native client build and package versions for live acceptance.
 
-[SDK contract and errors](https://github.com/LO-ink/lo-miniapp-sdk) ·
-[Native integration](https://github.com/LO-ink/lo-platform-adapters/tree/main/packages/lo)
+[SDK contract and errors](https://github.com/LO-ink/lo-miniapp-sdk)
