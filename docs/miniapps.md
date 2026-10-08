@@ -1,6 +1,9 @@
 # Build a native LO Mini App
 
-Use Mini App SDK 0.22 or later for the native LO client and transport.
+Use Mini App SDK 0.23 or later for the native LO client and transport.
+The SDK and its repository tooling require Node.js 22.13 or newer. Use an
+up-to-date supported Node.js release for development and server verification.
+This Node.js minimum does not change the browser build or native host protocol.
 The SDK discovers the host only when createLoClient is called; importing it is inert.
 It does not inject globals or require a framework.
 
