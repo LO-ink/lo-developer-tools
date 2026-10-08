@@ -47,3 +47,12 @@ test("credential scanner captures the whole LO token and rejects truncated or ad
     assert.equal(regex.test(value), false);
   assert.match(configuration, /secretGroup = 1/);
 });
+
+test("current native onboarding states the supported SDK and Node minimum", () => {
+  for (const path of ["docs/miniapps.md", "docs/migration.md"]) {
+    const body = readFileSync(resolve(root, path), "utf8");
+    assert.match(body, /Mini App SDK 0\.23 or later/);
+    assert.match(body, /Node\.js 22\.13 or newer/);
+    assert.doesNotMatch(body, /Mini App SDK 0\.22 or later/);
+  }
+});

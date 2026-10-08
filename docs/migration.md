@@ -1,6 +1,6 @@
 # Upgrading an LO application
 
-Install Mini App SDK 0.22 or later and call `createLoClient` at the application's composition root. Host discovery happens only during that explicit call.
+Install Mini App SDK 0.23 or later with Node.js 22.13 or newer and call `createLoClient` at the application's composition root. Host discovery happens only during that explicit call.
 No additional native adapter package is required.
 
 ```sh
