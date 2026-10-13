@@ -2,14 +2,16 @@
 
 A secretary is a bot acting in selected private human conversations on behalf of
 an owner. Recipients see the human author; LO separately records the bot actor.
-LO enforces consent and stores messages and drafts. Your bot runtime hosts the
-response logic, storage and any AI provider.
+LO enforces chat scope and delegated permissions and stores messages. Your bot
+runtime owns AI response logic, proposals, approval and any AI provider. Native
+exact-template auto-replies and schedules remain in LO.
 
-Use `@lo-ink/bot-sdk` 0.5 or later with its included native HTTP transport,
-verified against your deployed LO backend. `createLoSecretaryClient` creates the
-native client without a separate adapter. Start with the
-[reference bot](https://github.com/LO-ink/lo-platform-adapters/tree/main/examples/secretary)
-and its synthetic tests. The Node example is a single-process template bot without AI.
+Use the current published `@lo-ink/bot-sdk` with its native HTTP transport,
+verified against the deployed LO backend. `createLoSecretaryClient` needs no
+separate adapter. New integrations use bot-owned proposals; SDK 0.6.0 removes
+the old native proposal operation. Confirm release availability before upgrading.
+The [old native review example](https://github.com/LO-ink/lo-platform-adapters/tree/main/examples/secretary)
+is retired. Do not start its poller or replay its stored jobs as sends.
 Python `lo-aiogram` does not implement this native LO extension; familiar business
 method names do not grant access to any account outside LO.
 
@@ -26,18 +28,22 @@ method names do not grant access to any account outside LO.
    webhook secret before decoding any body.
 5. Have the other test human send a new message after consent. Existing history
    is not exported. Process the `secretary_message` update with its exact context.
-6. Call `proposeDraft` with `reason: "manual_review"` and a stable request ID.
-   The owner reviews and approves or cancels in LO. Approval belongs to the
-   authenticated owner API, not the bot SDK.
-7. Confirm the draft is sent, one outgoing message reaches the selected peer,
-   and an excluded third conversation receives no action. Revoke the connection
-   and confirm pending work cannot send.
+6. Persist an exact proposed reply, its context and a stable request ID in the
+   bot. Present it in the owner's private bot chat. Authenticate the owner and
+   callback, bind it to that exact proposal/message and atomically claim it.
+   Connection access or an owner ID alone is not approval.
+7. Recheck current consent and call `sendText` only for that approved operation.
+   Confirm one outgoing message reaches the selected peer. Discarded, unapproved
+   or excluded work must not send; replayed callbacks must not send twice. Revoke
+   the connection while work is pending and confirm it cannot send.
 
-The bot can separately use `sendText` when the owner grants `send_messages`.
-There is no universal review requirement for third-party runtimes. A proposed
-review draft cannot bypass its approval through direct sending. Reference
-automatic templates require a separate explicit per-chat owner rule; sending
-permission alone does not enable that rule.
+Bots may implement their own explicitly enabled automatic reply mode. LO
+permissions do not certify a bot's approval implementation. Keep the proposal
+state machine and authorization checks separate from the AI model: model output
+cannot approve itself, select another recipient or regenerate an action key.
+
+LO's exact templates and schedules are a separate native feature; removing AI
+approval from LO does not remove those owner-controlled rules.
 
 ## Keep identifiers and consent separate
 
@@ -62,7 +68,9 @@ bot, connection and peer. After a timeout, cancellation or connection failure,
 the outcome may already be committed: reuse the stored request, never mint a new
 key. Advance the polling cursor or return webhook success only after durable
 processing. Ignore human owner echoes and messages with a secretary actor.
-The reference implementation demonstrates private state and restart recovery.
+Retain uncertain sends and the exact already approved operation. Legacy native
+draft IDs, request IDs and receipts are historical evidence, never a migration
+queue. Do not assign new keys or convert them to bot-owned sends.
 
 ## Rights and limits
 
@@ -77,7 +85,7 @@ or deletion, new incoming messages and manual takeover can invalidate queued
 work. The source incoming window is 24 hours; external generation does not extend
 it. Fail closed and stop obsolete jobs, even if a cached connection was enabled.
 
-Draft text is bounded to 4096 UTF-16 units. Media require signed, scoped file IDs;
+Reply text is bounded to 4096 UTF-16 units. Media require signed, scoped file IDs;
 an ordinary or expired file ID cannot grant secretary access. Do not export
 history, profiles/stories, payment permissions or private message bodies through
 diagnostics. Quotas and supported media depend on the deployed backend: handle
@@ -98,8 +106,9 @@ server denial rather than promising unlimited access.
 Never display or log raw upstream bodies, credentials, quoted messages or AI
 prompts. Record safe codes, operation names and correlation metadata. A cancelled
 client request does not retract bytes already authorized and delivered externally.
-After uncertain owner approval, inspect drafts in LO and retry the exact owner
-decision; receipts are retained only for their documented recovery window.
+After an uncertain bot-owned send, reconcile its persisted attempt and recipient
+evidence. Do not assume a denial proves no commit. Receipts are retained only for
+their documented recovery window; expiry never permits a replacement key.
 
 ## Add AI deliberately
 
@@ -107,6 +116,11 @@ AI runs in your bot service, not inside the SDK. Explain which provider receives
 conversation data and obtain the appropriate consent. Bound generation time,
 output length and cost. Treat incoming text and model output as untrusted data:
 neither may change the owner, recipient, rights, source context or request key.
+If an assistant uses MCP knowledge, use only the corpus already authorized for
+that bot/owner. An owner prompt may narrow the subject; it never grants access to
+another owner's corpus. Keep delegated chat processing read-only for knowledge
+tools and separate from coding, shell and mutation tools. Credentials stay in
+the bot service, not prompts, proposal state or browser configuration.
 Recheck server policy when submitting a result generated before an edit or revoke.
 Do not treat model quality, prompt-injection resistance or spending controls as
 properties certified by LO's authorization checks.
@@ -114,10 +128,12 @@ properties certified by LO's authorization checks.
 ## Diagnose in order
 
 Check capability, saved owner consent, selected chat and rights, then a fresh
-incoming event, bot delivery, proposal and owner approval. A successful ordinary
+incoming event, bot delivery, persisted proposal, approval callback and delegated send. A successful ordinary
 chat with the bot proves only its ordinary receive path. A read-only connection
 check does not prove secretary delivery or generation. Record the backend,
 client, SDK and adapter versions when reporting failures.
 
 See [operations and failures](https://github.com/LO-ink/lo-platform-adapters/blob/main/docs/secretary.md)
-and the [typed review example](https://github.com/LO-ink/lo-platform-adapters/blob/main/examples/secretary-review.ts).
+and the [typed final-send consent example](https://github.com/LO-ink/lo-platform-adapters/blob/main/examples/secretary-approved-reply.ts).
+That helper requires an already authenticated and atomically claimed proposal;
+it does not implement approval or verify a live deployment.
