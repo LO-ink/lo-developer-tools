@@ -4,12 +4,13 @@ Tools and documentation for building applications for LO.
 
 ## Validate application metadata
 
-With this package installed, run:
+Install the tools in your project and run the local CLI with `npx`:
 
 ```sh
-lo doctor ./lo.app.json
-lo doctor ./lo.app.json --publish
-lo doctor ./lo.app.json --json
+npm install --save-dev @lo-ink/developer-tools
+npx lo doctor ./lo.app.json
+npx lo doctor ./lo.app.json --publish
+npx lo doctor ./lo.app.json --json
 ```
 
 The command checks draft metadata by default. `--publish` also requires the stored profile fields the server checks before publication: an app avatar URL, a non-empty description, and a terms URL. The server additionally requires a stored app key and, when configured, a still-valid bot association. This local command cannot inspect those server-owned conditions. It does not publish an application, verify URL availability, grant permissions, validate an uploaded avatar reference, or replace server validation. Exit codes: `0` valid metadata, `1` invalid or unreadable manifest, `2` command usage error.
