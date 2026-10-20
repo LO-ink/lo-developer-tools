@@ -4,7 +4,7 @@ NPM := npm
 
 .PHONY: ci install format format-check lint check architecture test coverage security build package
 
-ci: build format-check lint check architecture coverage package policy security secrets
+ci: format-check lint check architecture coverage package policy security secrets
 
 install:
 	$(NPM) ci --ignore-scripts
